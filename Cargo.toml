@@ -1,0 +1,46 @@
+[package]
+name = "legatio"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+# TUI library
+ratatui = "0.29.0"
+crossterm = "0.28.1"
+
+# Async runtime
+tokio = { version = "1.20.0", features = ["macros", "full"] }
+
+# Database
+sqlx = { version = "0.6.2", features = ["runtime-tokio-native-tls", "sqlite"] }
+
+# HTTP client
+reqwest = { version = "^0.12.9", default-features = false, features = ["json"] }
+
+# JSON handling
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Environment variable management
+dotenv = "0.15"
+
+# Error handling
+anyhow = "1.0"
+
+# Logging
+log = "0.4"
+env_logger = "0.10"
+
+# For calling external commands
+async-process = "1.4"
+
+# For managing paths
+path-absolutize = "3.0"
+
+# Fzf alternative
+skim = "0.9"
+
+# Walk dir
+walkdir = "2.5.0"
