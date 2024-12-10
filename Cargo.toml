@@ -43,4 +43,5 @@ path-absolutize = "3.0"
 skim = "0.9"
 
 # Walk dir
-walkdir = "2.5.0"
+ignore = "0.4"
+rayon = "1.5"
