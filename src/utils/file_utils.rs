@@ -2,6 +2,7 @@ use std::fs;
 use rayon::prelude::*;
 use anyhow::Result;
 use ignore::WalkBuilder;
+use crate::utils::structs::File;
 
 // List of directories and file patterns to ignore
 const IGNORE_LIST: &[&str] = &[
@@ -61,11 +62,11 @@ pub fn get_contents(dir: String, dir_or_file: bool) -> Result<Vec<String>> {
 }
 
 
-pub fn read_files(file_paths: &[String]) -> Result<Vec<(String, String)>> {
+pub fn read_files(file_paths: &[String]) -> Result<Vec<File>> {
     file_paths.par_iter()
         .map(|path| {
             let content = fs::read_to_string(path)?;
-            Ok((path.clone(), content))
+            Ok(File::new(&path.clone(), &content))
         })
         .collect()
 }

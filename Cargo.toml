@@ -14,7 +14,7 @@ crossterm = "0.28.1"
 tokio = { version = "1.20.0", features = ["macros", "full"] }
 
 # Database
-sqlx = { version = "0.6.2", features = ["runtime-tokio-native-tls", "sqlite"] }
+sqlx = { version = "0.6.2", features = ["runtime-tokio-native-tls", "sqlite", "macros"] }
 
 # HTTP client
 reqwest = { version = "^0.12.9", default-features = false, features = ["json"] }
@@ -45,3 +45,7 @@ skim = "0.9"
 # Walk dir
 ignore = "0.4"
 rayon = "1.5"
+
+# uuid
+uuid = { version = "1.11.0", features = ["v4"] }
+
