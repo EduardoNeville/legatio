@@ -1,7 +1,7 @@
 use dotenv::dotenv;
 use services::flow::flow;
 use utils::db_utils::get_db_pool;
-use std::{env};
+use std::env;
 
 mod services;
 mod utils;

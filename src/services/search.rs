@@ -5,6 +5,7 @@ use std::io::Cursor;
 pub fn select_files(file_list: Vec<String>) -> Result<Vec<String>> {
     let options = SkimOptionsBuilder::default()
         .multi(true)
+        .bind(vec!["change:reload(cat {})"])
         .build()
         .unwrap();
 

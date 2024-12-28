@@ -66,7 +66,7 @@ pub async fn flow(pool: &SqlitePool)-> Result<()> {
                     //DEBUG
                     println!("Current files: \n");
                     for (idx, row) in files.iter().enumerate() {
-                        println!(" [{}]: {} \n", idx, row.file_id);
+                        println!(" [{}]: {} \n", idx, row.file_path.split("/").last().unwrap());
                     }
                 },
                 1 => {
@@ -90,16 +90,14 @@ pub async fn flow(pool: &SqlitePool)-> Result<()> {
 
                 match ans {
                     0 => {
-                        println!("Inside sel_proj: {} Inside sel_scroll: {}", sel_proj, sel_scroll);
                         let prompt = prompt_ctrl(pool, scroll.clone()).await.unwrap();
                         println!("Prompt created: \n {:?}", prompt);
                     },
                     1 => {
-                        println!("Inside sel_proj: {} Inside sel_scroll: {}", sel_proj, sel_scroll);
                         let _ = ask_ctrl(pool, project.clone(), scroll.clone()).await;
                     },
                     2 => { sel_scroll = false; },
-                    3 => { sel_proj = false; }
+                    3 => { sel_proj = false; sel_scroll = false; }
                     _   => println!("Give an answer!"),
                 }
                 
