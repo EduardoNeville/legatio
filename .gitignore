@@ -3,3 +3,6 @@
 *.db
 
 migrations/
+
+mocks/
+misc/

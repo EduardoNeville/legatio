@@ -62,11 +62,11 @@ pub fn get_contents(dir: String, dir_or_file: bool) -> Result<Vec<String>> {
 }
 
 
-pub fn read_files(file_paths: &[String]) -> Result<Vec<File>> {
+pub fn read_files(file_paths: &[String], project_id: &String) -> Result<Vec<File>> {
     file_paths.par_iter()
         .map(|path| {
             let content = fs::read_to_string(path)?;
-            Ok(File::new(&path.clone(), &content))
+            Ok(File::new(&path.clone(), &content, &project_id.clone()))
         })
         .collect()
 }

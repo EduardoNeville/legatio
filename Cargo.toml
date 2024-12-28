@@ -6,15 +6,13 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-# TUI library
-ratatui = "0.29.0"
-crossterm = "0.28.1"
 
 # Async runtime
-tokio = { version = "1.20.0", features = ["macros", "full"] }
+tokio = { version = "1.20.0", features = ["macros"]} # "full"
 
 # Database
-sqlx = { version = "0.6.2", features = ["runtime-tokio-native-tls", "sqlite", "macros"] }
+
+sqlx = { version = "0.6.2", features = ["runtime-tokio-native-tls", "sqlite"]} # "macros"
 
 # HTTP client
 reqwest = { version = "^0.12.9", default-features = false, features = ["json"] }
@@ -49,3 +47,4 @@ rayon = "1.5"
 # uuid
 uuid = { version = "1.11.0", features = ["v4"] }
 
+futures = "0.3.31"

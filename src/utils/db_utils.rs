@@ -1,100 +1,224 @@
-use crate::utils::structs::{Project, File, Prompt, Scrolls};
-use sqlx::{sqlite::SqlitePool, Error};
-use anyhow::{Ok, Result};
-use std::collections::HashSet;
+use futures::future;
+use crate::utils::structs::{Project, File, Scroll, Prompt};
+use sqlx::{migrate::MigrateDatabase, sqlite::{SqlitePool, SqliteRow}, Row, Sqlite};
+use anyhow::Result;
+//use std::collections::HashSet;
 
-pub async fn get_db_pool() -> Result<SqlitePool> {
-    let pool = SqlitePool::connect("sqlite://legatio.db").await?;
-    Ok(pool)
+pub async fn get_db_pool(db_url: &String) -> Result<SqlitePool> {
+    if !Sqlite::database_exists(db_url).await.unwrap_or(false) {
+        println!("Creating database {}", db_url);
+        match Sqlite::create_database(db_url).await {
+            Ok(_) => println!("Create db success"),
+            Err(error) => panic!("error: {}", error),
+        }
+
+        let db = SqlitePool::connect(db_url).await.unwrap();
+        let crate_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
+        let migrations = std::path::Path::new(&crate_dir).join("./migrations");
+        let migration_results = sqlx::migrate::Migrator::new(migrations)
+            .await
+            .unwrap()
+            .run(&db)
+            .await;
+        match migration_results {
+            Ok(_) => println!("Migration success"),
+            Err(error) => {
+                panic!("error: {}", error);
+            }
+        }
+        println!("migration: {:?}", migration_results);
+    } else {
+        println!("Database already exists");
+    }
+    let db = SqlitePool::connect(db_url).await.unwrap();
+    Ok(db)
 }
 
-pub async fn store_project(pool: &SqlitePool, project: &Project)->Result<()>{
-    sqlx::query(
-    "INSERT INTO projects (id, project_path, files) 
-    VALUES ($1, $2, $3)")
-    .bind(project.project_id.clone())
-    .bind(project.project_path.clone())
-    .bind(project.files.clone())
-    .execute(pool).await?;
+pub async fn store_project(pool: &SqlitePool, project: &Project) -> Result<()> {
+    let results = sqlx::query(
+        "INSERT INTO projects (project_id, project_path) 
+        VALUES ($1, $2)",)
+        .bind(&project.project_id)
+        .bind(&project.project_path)
+        .execute(pool)
+        .await
+        .unwrap();
+
+    println!("Inserted into projects: {:?}", results);
     Ok(())
+}
+
+pub async fn get_projects(pool: &SqlitePool) -> Result<Vec<SqliteRow>> {
+    let result = sqlx::query(
+        "SELECT * 
+        FROM projects;")
+        .fetch_all(pool)
+        .await
+        .unwrap();
+    Ok(result)
 }
 
 pub async fn store_file(pool: &SqlitePool, file: &File) -> Result<()> {
     sqlx::query(
-    "INSERT INTO files (id, file_path, content)
-    VALUES ($1, $2, $3)")
-    .bind(file.file_id.clone())
-    .bind(file.file_path.clone())
-    .bind(file.content.clone())
-    .execute(pool).await?;
+        "INSERT INTO files (file_id, file_path, content, project_id) 
+        VALUES ($1, $2, $3, $4)")
+        .bind(file.file_id.clone())
+        .bind(file.file_path.clone())
+        .bind(file.content.clone())
+        .bind(file.project_id.clone())
+        .execute(pool)
+        .await
+        .unwrap();
+
     Ok(())
 }
 
-//pub async fn store_files(pool: &SqlitePool, project_id: &String, files: &Vec<File>)-> Result<()>{
-//    let existing_project: Option<Project> = sqlx::query!(
-//        "SELECT project_id, project_path, files FROM projects WHERE project_id = ?",
-//        project_id
-//    )
-//    .fetch_optional(pool)
-//    .await?
-//    .map(|row| Project {
-//        project_id: row.project_id,
-//        project_path: row.project_path,
-//        files: row.files.unwrap_or_else(|| String::new()), // Handle potential NULL in the database
-//    });
-//
-//    let mut existing_file_ids = HashSet::new();
-//    if let Some(project) = existing_project {
-//        if !project.files.is_empty() {
-//            existing_file_ids = project.files.split(':').map(|s| s.to_string()).collect();
-//        }
-//    }
-//
-//
-//    //Filter the files, only include files whose id is not in the existing files
-//    let files_to_insert: Vec<&File> = files
-//        .iter()
-//        .filter(|file| !existing_file_ids.contains(&file.file_id))
-//        .collect();
-//
-//
-//    let mut query = sqlx::query("INSERT INTO files (id, file_path, content) VALUES (?, ?, ?)"); 
-//
-//    Ok(())
-//}
+
+pub async fn store_files(pool: &SqlitePool, files: Vec<File>) -> Result<()> {
+    future::join_all(
+        files.into_iter().map(|file| {
+            let pool = pool.clone(); // Clone pool for safety
+            async move { store_file(&pool, &file).await }
+        })
+    )
+    .await
+    .into_iter()
+    .collect::<Result<Vec<_>, _>>()?; // Aggregate results & propagate errors
+
+    Ok(())
+}
+
+pub async fn get_files(pool: &SqlitePool, project_id: &String)-> Result<Vec<File>> {
+    let files_result: Vec<File> = sqlx::query_as::<_, File>(
+        "SELECT *
+        FROM files 
+        WHERE project_id = $1;")
+        .bind(project_id)
+        .fetch_all(pool)
+        .await
+        .unwrap();
+
+    Ok(files_result)
+}
 
 pub async fn store_prompt(pool: &SqlitePool, prompt: &Prompt) -> Result<()> {
+
     sqlx::query(
-        "INSERT INTO prompts (id, prompt, output)
-        VALUES ($1, $2, $3)"
-    )
-    .bind(prompt.prompt_id.clone())
-    .bind(prompt.content.clone())
-    .bind(prompt.output.clone())
-    .execute(pool).await?;
+        "INSERT INTO prompts (prompt_id, scroll_id, content, output, next_prompt_id) 
+         VALUES ($1, $2, $3, $4, $5)")
+        .bind(&prompt.prompt_id)
+        .bind(&prompt.scroll_id)
+        .bind(&prompt.content)
+        .bind(&prompt.output)
+        .bind("")
+        .execute(pool)
+        .await?;
+
     Ok(())
+
 }
 
-pub async fn store_scrolls(pool: &SqlitePool, scrolls: &Scrolls) -> Result<()> {
+pub async fn get_scrolls(pool: &SqlitePool, project_id: &String) -> Result<Vec<SqliteRow>> {
+    let result = sqlx::query(
+        "SELECT * 
+        FROM scrolls
+        WHERE project_id = $1;")
+        .bind(project_id)
+        .fetch_all(pool)
+        .await
+        .unwrap();
+
+    Ok(result)
+}
+
+
+pub async fn get_scroll(pool: &SqlitePool, scroll_id: &String) -> Result<Vec<SqliteRow>> {
+    let result = sqlx::query(
+        "SELECT * 
+        FROM scrolls
+        WHERE scroll_id = $1;")
+        .bind(scroll_id)
+        .fetch_all(pool)
+        .await
+        .unwrap();
+
+    Ok(result)
+}
+
+pub async fn store_scroll(pool: &SqlitePool, scroll: &Scroll) -> Result<()> {
     sqlx::query(
-        "INSERT INTO scrolls (id, project_id, prompts)
-        VALUES ($1, $2, $3)"
-    )
-    .bind(scrolls.scroll_id.clone())
-    .bind(scrolls.project_id.clone())
-    .bind(scrolls.prompts.clone())
-    .execute(pool).await?;
+        "INSERT INTO scrolls (scroll_id, project_id, init_prompt_id) 
+        VALUES ($1, $2, $3)")
+        .bind(&scroll.scroll_id)
+        .bind(&scroll.project_id)
+        .bind(&scroll.init_prompt_id)
+        .execute(pool)
+        .await?;
+
     Ok(())
 }
 
-pub async fn append_id(pool: &SqlitePool, table_id: &u32, column_name: &String, id: &u32)-> Result<()> {
-    // TODO
-    let ids = sqlx::query("
-        SELECT $1 FROM $2 ;
-    ").bind(&column_name).bind(table_id)
-    .execute(pool).await?;
+// Updates scrolls init_prompt_id if "" aka no prompts
+// Updates the last prompt in the list to the new prompt id
+pub async fn update_scroll(pool: &SqlitePool, scroll: &Scroll, prompt: &Prompt) -> Result<()> {
+    if scroll.init_prompt_id == "" {
+        sqlx::query(
+            "UPDATE scrolls 
+            SET init_prompt_id = $1 
+            WHERE scroll_id = $2")
+            .bind(prompt.prompt_id.clone())
+            .bind(scroll.scroll_id.clone())
+            .execute(pool)
+            .await
+            .unwrap();
+    }
 
-    println!("ids: {:?}", ids);
+    let prompts: Vec<Prompt> = sqlx::query_as::<_, Prompt>(
+        "SELECT * 
+        FROM prompts 
+        WHERE scroll_id = $1;") // Find last prompt
+        .bind(prompt.scroll_id.clone())
+        .fetch_all(pool)
+        .await
+        .unwrap();
+
+    for (idx, row) in prompts.iter().enumerate() {
+        println!(" [{}]: content {}, curr_id {}, next_id {} \n", idx, row.content, row.prompt_id, row.next_prompt_id);
+    }
+
+    if let Some(last_prompt) = prompts.iter().find(|p| p.next_prompt_id == prompt.next_prompt_id) {
+        sqlx::query(
+            "UPDATE prompts 
+            SET next_prompt_id = $1 
+            WHERE prompt_id = $2")
+            .bind(&prompt.prompt_id)
+            .bind(&last_prompt.prompt_id)
+            .execute(pool)
+            .await
+            .unwrap();
+
+    } else {
+        println!("No matching prompt found.");
+    }
+
     Ok(())
 }
 
+// Sorted from first to last prompt on the list
+pub async fn get_prompts_from_scroll(pool: &SqlitePool, scroll: &Scroll)-> Result<Vec<Prompt>> {
+    let prompts: Vec<Prompt> = sqlx::query_as::<_, Prompt>(
+        "SELECT * 
+        FROM prompts
+        WHERE scroll_id = $1;")
+        .bind(&scroll.scroll_id)
+        .fetch_all(pool)
+        .await
+        .unwrap();
+
+    println!("Current prompts: \n");
+    for (idx, row) in prompts.iter().enumerate() {
+        println!(" [{}]: curr_id {}, next_id {} \n", idx, row.prompt_id, row.next_prompt_id);
+    }
+
+    Ok(prompts)
+}
