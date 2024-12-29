@@ -17,7 +17,7 @@ async fn main() -> Result<()> {
     let db_url = "sqlite://legatio.db";
     let pool = get_db_pool(&db_url).await?;
 
-    flow(&pool).await;
+    let _ = flow(&pool).await;
 
     //
     //let ans = get_openai_response(&api_key, &system_prompt, &user_prompt).await?;

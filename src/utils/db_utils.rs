@@ -1,6 +1,6 @@
 use futures::future;
 use crate::utils::structs::{Project, File, Scroll, Prompt};
-use sqlx::{migrate::MigrateDatabase, sqlite::{SqlitePool, SqliteRow}, Row, Sqlite};
+use sqlx::{migrate::MigrateDatabase, sqlite::SqlitePool, Sqlite};
 use anyhow::Result;
 //use std::collections::HashSet;
 
@@ -132,8 +132,8 @@ pub async fn get_scrolls(pool: &SqlitePool, project_id: &String) -> Result<Vec<S
 }
 
 
-pub async fn get_scroll(pool: &SqlitePool, scroll_id: &String) -> Result<Vec<SqliteRow>> {
-    let result = sqlx::query(
+pub async fn get_scroll(pool: &SqlitePool, scroll_id: &String) -> Result<Vec<Scroll>> {
+    let result = sqlx::query_as::<_, Scroll>(
         "SELECT * 
         FROM scrolls
         WHERE scroll_id = $1;")

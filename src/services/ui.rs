@@ -1,8 +1,6 @@
 use std::io;
 use std::io::Write;
-
 use anyhow::{Ok, Result};
-use sqlx::sqlite::SqliteRow;
 
 pub fn usr_ask(sel: &String)-> Result<usize> {
     println!("{}", sel);

@@ -6,3 +6,6 @@ migrations/
 
 mocks/
 misc/
+
+legatio.db-shm 
+legatio.db-wal
