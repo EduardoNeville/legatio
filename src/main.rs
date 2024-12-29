@@ -14,7 +14,7 @@ async fn main() -> Result<()> {
     env_logger::init();
 
     let api_key = env::var("OPENAI_API_KEY")?;
-    let db_url = String::from("sqlite://legatio.db");
+    let db_url = "sqlite://legatio.db";
     let pool = get_db_pool(&db_url).await?;
 
     flow(&pool).await;

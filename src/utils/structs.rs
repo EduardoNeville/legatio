@@ -1,5 +1,4 @@
-use std::collections::HashSet;
-use sqlx::{ FromRow };
+use sqlx::FromRow;
 use uuid::Uuid;
 
 #[derive(Clone, FromRow, Debug)]

@@ -15,17 +15,17 @@ use crate::{
 
 pub async fn flow(pool: &SqlitePool)-> Result<()> {
 
-    let home = String::from("/home/eduardoneville/Desktop/AiRs");
+    let home = String::from("/home/eduardoneville/Desktop/");
 
     loop {
 
         let projects = get_projects(pool).await.unwrap();
         let mut sel = String::from("Select your project: \n");
-        for (idx, row) in projects.iter().enumerate() {
+        for (idx, project) in projects.iter().enumerate() {
             sel.push_str(
                 &format!(" [{:?}]: {:?} \n", 
                     idx, 
-                    row.get::<String, &str>("project_path").split("/").last().unwrap()
+                    project.project_path.split("/").last().unwrap()
                 )
             );
         }
@@ -34,23 +34,23 @@ pub async fn flow(pool: &SqlitePool)-> Result<()> {
         let val = usr_ask(&sel).unwrap();
         let mut sel_proj = false;
         let mut sel_scroll = false;
-        let mut project: Project;
+        let project: Project;
         if projects.len() > val {
             let val_proj = projects.get(val).unwrap();
 
             project = Project {
-                project_id: val_proj.get::<String, &str>("project_id").to_string(),
-                project_path: val_proj.get::<String, &str>("project_path").to_string(),
+                project_id: val_proj.project_id.to_string(),
+                project_path: val_proj.project_path.to_string(),
             };
             sel_proj = true;
 
         } else {
-            let dir_list = get_contents(home.clone(), true);
-            let selected_dir = select_files(dir_list.unwrap()).unwrap();
+            let dir_list = get_contents(&home, true, 5);
+            let selected_dir = select_files(dir_list.unwrap(), false).unwrap();
 
-            project = Project::new(&selected_dir[0].clone());
+            project = Project::new(&selected_dir[0]);
 
-            let _ = store_project(&pool, &project.clone()).await.unwrap();
+            let _ = store_project(&pool, &project).await.unwrap();
 
             sel_proj = true;
         }
@@ -62,21 +62,21 @@ pub async fn flow(pool: &SqlitePool)-> Result<()> {
             let mut scroll = Scroll::new(&project.project_id, &String::from(""));
             match ans {
                 0 => {
-                    let files = file_ctrl(pool, project.clone()).await.unwrap();
-                    //DEBUG
+                    let files = file_ctrl(pool, &project).await.unwrap();
+
                     println!("Current files: \n");
                     for (idx, row) in files.iter().enumerate() {
                         println!(" [{}]: {} \n", idx, row.file_path.split("/").last().unwrap());
                     }
                 },
                 1 => {
-                    scroll = scroll_ctrl(pool, project.clone()).await.unwrap();
+                    scroll = scroll_ctrl(pool, &project).await.unwrap();
                     println!("Scroll selected: \n {:?}", scroll);
                     sel_scroll = true;
                 },
                 2 => {
                     let _ = store_scroll(pool, &scroll).await;
-                    let prompt = prompt_ctrl(pool, scroll.clone()).await.unwrap();
+                    let prompt = prompt_ctrl(pool, &scroll).await.unwrap();
                     println!("Prompt created: \n {:?}", prompt);
                     sel_scroll = true;
                 },
@@ -90,11 +90,11 @@ pub async fn flow(pool: &SqlitePool)-> Result<()> {
 
                 match ans {
                     0 => {
-                        let prompt = prompt_ctrl(pool, scroll.clone()).await.unwrap();
+                        let prompt = prompt_ctrl(pool, &scroll).await.unwrap();
                         println!("Prompt created: \n {:?}", prompt);
                     },
                     1 => {
-                        let _ = ask_ctrl(pool, project.clone(), scroll.clone()).await;
+                        let _ = ask_ctrl(pool, &project, &scroll).await;
                     },
                     2 => { sel_scroll = false; },
                     3 => { sel_proj = false; sel_scroll = false; }
@@ -106,11 +106,11 @@ pub async fn flow(pool: &SqlitePool)-> Result<()> {
     }
 }
 
-async fn file_ctrl(pool: &SqlitePool, project: Project)-> Result<Vec<File>> {
-    let files_in_dir = get_contents(project.project_path.clone(), false);
-    let selected_files = select_files(files_in_dir.unwrap()).unwrap();
+async fn file_ctrl(pool: &SqlitePool, project: &Project)-> Result<Vec<File>> {
+    let files_in_dir = get_contents(&project.project_path, false, 7);
+    let selected_files = select_files(files_in_dir.unwrap(), true).unwrap();
     let files = read_files(&selected_files, &project.project_id).unwrap();
-    store_files(&pool, files.clone())
+    store_files(&pool, &files)
         .await
         .unwrap();
 
@@ -118,7 +118,7 @@ async fn file_ctrl(pool: &SqlitePool, project: Project)-> Result<Vec<File>> {
     Ok(files)
 }
 
-async fn prompt_ctrl(pool: &SqlitePool, scroll: Scroll)-> Result<Prompt> {
+async fn prompt_ctrl(pool: &SqlitePool, scroll: &Scroll)-> Result<Prompt> {
     // Ask the user for a prompt
     print!("Enter your prompt: ");
     io::stdout().flush()?;
@@ -143,10 +143,10 @@ async fn prompt_ctrl(pool: &SqlitePool, scroll: Scroll)-> Result<Prompt> {
     Ok(usr_prompt)
 }
 
-async fn ask_ctrl(pool: &SqlitePool, project: Project, scroll: Scroll)-> Result<()>{
+async fn ask_ctrl(pool: &SqlitePool, project: &Project, scroll: &Scroll)-> Result<()>{
     let files: Vec<File> = get_files(pool, &project.project_id).await.unwrap();
 
-    let system_prompt = construct_system_prompt(files.clone()).await.unwrap();
+    let system_prompt = construct_system_prompt(&files).await.unwrap();
 
     let prompts: Vec<Prompt> = get_prompts_from_scroll(pool, &scroll).await.unwrap();
 
@@ -158,15 +158,15 @@ async fn ask_ctrl(pool: &SqlitePool, project: Project, scroll: Scroll)-> Result<
 
 }
 
-async fn scroll_ctrl(pool: &SqlitePool, project: Project)-> Result<Scroll>{
+async fn scroll_ctrl(pool: &SqlitePool, project: &Project)-> Result<Scroll>{
     let scrolls = get_scrolls(pool, &project.project_id).await.unwrap();
     
     let mut sel = String::from("Choose a scroll: \n");
-    for (idx, row) in scrolls.iter().enumerate() {
+    for (idx, scroll) in scrolls.iter().enumerate() {
         sel.push_str(
             &format!(" [{:?}]: {:?} \n", 
                 idx, 
-                row.get::<String, &str>("scroll_id")
+                scroll.scroll_id
             )
         );
     }
@@ -180,9 +180,9 @@ async fn scroll_ctrl(pool: &SqlitePool, project: Project)-> Result<Scroll>{
         let val_scroll = scrolls.get(val).unwrap();
 
         scroll = Scroll {
-            scroll_id: val_scroll.get::<String, &str>("scroll_id").to_string(),
-            project_id: val_scroll.get::<String, &str>("project_id").to_string(),
-            init_prompt_id: val_scroll.get::<String, &str>("init_prompt_id").to_string(),
+            scroll_id:      val_scroll.scroll_id.to_string(),
+            project_id:     val_scroll.project_id.to_string(),
+            init_prompt_id: val_scroll.init_prompt_id.to_string(),
         };
     
     } else {

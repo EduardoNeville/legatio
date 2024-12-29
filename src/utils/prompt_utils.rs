@@ -1,7 +1,7 @@
 use anyhow::Result;
 use crate::utils::structs::File;
 
-pub async fn construct_system_prompt(files: Vec<File>) -> Result<String> {
+pub async fn construct_system_prompt(files: &[File]) -> Result<String> {
     let mut system_prompt = String::new();
     for (idx, file) in files.iter().enumerate() {
         system_prompt.push_str(

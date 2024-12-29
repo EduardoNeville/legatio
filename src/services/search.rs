@@ -2,9 +2,9 @@ use skim::prelude::*;
 use anyhow::Result;
 use std::io::Cursor;
 
-pub fn select_files(file_list: Vec<String>) -> Result<Vec<String>> {
+pub fn select_files(file_list: Vec<String>, multi: bool) -> Result<Vec<String>> {
     let options = SkimOptionsBuilder::default()
-        .multi(true)
+        .multi(multi)
         .bind(vec!["change:reload(cat {})"])
         .build()
         .unwrap();

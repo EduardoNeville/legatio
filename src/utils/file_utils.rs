@@ -1,10 +1,9 @@
 use std::fs;
 use rayon::prelude::*;
 use anyhow::Result;
-use ignore::WalkBuilder;
 use crate::utils::structs::File;
+use std::path::PathBuf;
 
-// List of directories and file patterns to ignore
 const IGNORE_LIST: &[&str] = &[
     "node_modules",
     "target", // Common build output directory for Rust projects
@@ -14,47 +13,49 @@ const IGNORE_LIST: &[&str] = &[
     "/hidden_folder", // Example: ignore a specific folder
 ];
 
-pub fn get_contents(dir: String, dir_or_file: bool) -> Result<Vec<String>> {
+pub fn get_contents(
+    dir: &str,
+    dir_or_file: bool,
+    max_depth: usize,
+) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     let mut result = Vec::new();
-    let mut current_level = vec![dir];
+    let mut current_level = vec![(PathBuf::from(dir), 0)]; // Store path with current depth
 
     while !current_level.is_empty() {
         let mut next_level = Vec::new();
 
-        for current_dir in current_level {
-            let walker = WalkBuilder::new(current_dir.clone())
-                .max_depth(Some(1))
-                .hidden(false)
-                .standard_filters(false)
-                .add_custom_ignore_filename(".myignore")
-                .filter_entry(|e| !IGNORE_LIST.iter().any(|p| e.path().ends_with(p)))
-                .build();
+        for (current_dir, depth) in current_level {
+            // Check if we have reached the max search depth
+            if depth >= max_depth {
+                continue;
+            }
 
-            for entry in walker {
+            // Read directory entries
+            let entries = fs::read_dir(&current_dir)?;
+
+            for entry in entries {
                 let entry = entry?;
-
                 let path = entry.path();
-                let path_str = path.display().to_string();
 
-                if !result.contains(&current_dir.clone()){
-                    result.push(current_dir.clone())
+                // Get the file name or directory name as a string
+                if let Some(name) = path.file_name().and_then(|f| f.to_str()) {
+                    // Skip items in the ignore list
+                    if IGNORE_LIST.iter().any(|&ignore| name == ignore || path.ends_with(ignore)) {
+                        continue;
+                    }
                 }
 
-                if path_str != current_dir.clone() {
-                    if path.is_dir(){
-                        if next_level.contains(&path_str){
-                            next_level.retain(|x| x != &path_str);
-                        } else {
-                            next_level.push(path.display().to_string());
-                        }
-                    }
-
-                    if if dir_or_file { path.is_dir() } else { path.is_file() }{
-                        result.push(path.display().to_string())
-                    }
+                if dir_or_file && path.is_dir() {
+                    // If looking for directories, add them to the result and schedule for visiting
+                    result.push(path.display().to_string());
+                    next_level.push((path, depth + 1));
+                } else if !dir_or_file && path.is_file() {
+                    // If looking for files, add them to the result
+                    result.push(path.display().to_string());
                 }
             }
         }
+
         current_level = next_level;
     }
 
@@ -66,7 +67,7 @@ pub fn read_files(file_paths: &[String], project_id: &String) -> Result<Vec<File
     file_paths.par_iter()
         .map(|path| {
             let content = fs::read_to_string(path)?;
-            Ok(File::new(&path.clone(), &content, &project_id.clone()))
+            Ok(File::new(&path, &content, &project_id))
         })
         .collect()
 }

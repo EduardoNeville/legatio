@@ -4,7 +4,7 @@ use sqlx::{migrate::MigrateDatabase, sqlite::{SqlitePool, SqliteRow}, Row, Sqlit
 use anyhow::Result;
 //use std::collections::HashSet;
 
-pub async fn get_db_pool(db_url: &String) -> Result<SqlitePool> {
+pub async fn get_db_pool(db_url: &str) -> Result<SqlitePool> {
     if !Sqlite::database_exists(db_url).await.unwrap_or(false) {
         println!("Creating database {}", db_url);
         match Sqlite::create_database(db_url).await {
@@ -48,8 +48,8 @@ pub async fn store_project(pool: &SqlitePool, project: &Project) -> Result<()> {
     Ok(())
 }
 
-pub async fn get_projects(pool: &SqlitePool) -> Result<Vec<SqliteRow>> {
-    let result = sqlx::query(
+pub async fn get_projects(pool: &SqlitePool) -> Result<Vec<Project>> {
+    let result: Vec<Project> = sqlx::query_as::<_, Project>(
         "SELECT * 
         FROM projects;")
         .fetch_all(pool)
@@ -62,10 +62,10 @@ pub async fn store_file(pool: &SqlitePool, file: &File) -> Result<()> {
     sqlx::query(
         "INSERT INTO files (file_id, file_path, content, project_id) 
         VALUES ($1, $2, $3, $4)")
-        .bind(file.file_id.clone())
-        .bind(file.file_path.clone())
-        .bind(file.content.clone())
-        .bind(file.project_id.clone())
+        .bind(&file.file_id)
+        .bind(&file.file_path)
+        .bind(&file.content)
+        .bind(&file.project_id)
         .execute(pool)
         .await
         .unwrap();
@@ -74,10 +74,10 @@ pub async fn store_file(pool: &SqlitePool, file: &File) -> Result<()> {
 }
 
 
-pub async fn store_files(pool: &SqlitePool, files: Vec<File>) -> Result<()> {
+pub async fn store_files(pool: &SqlitePool, files: &[File]) -> Result<()> {
     future::join_all(
         files.into_iter().map(|file| {
-            let pool = pool.clone(); // Clone pool for safety
+            //let pool = pool.clone(); // Clone pool for safety
             async move { store_file(&pool, &file).await }
         })
     )
@@ -118,8 +118,8 @@ pub async fn store_prompt(pool: &SqlitePool, prompt: &Prompt) -> Result<()> {
 
 }
 
-pub async fn get_scrolls(pool: &SqlitePool, project_id: &String) -> Result<Vec<SqliteRow>> {
-    let result = sqlx::query(
+pub async fn get_scrolls(pool: &SqlitePool, project_id: &String) -> Result<Vec<Scroll>> {
+    let result = sqlx::query_as::<_, Scroll>(
         "SELECT * 
         FROM scrolls
         WHERE project_id = $1;")
@@ -166,8 +166,8 @@ pub async fn update_scroll(pool: &SqlitePool, scroll: &Scroll, prompt: &Prompt) 
             "UPDATE scrolls 
             SET init_prompt_id = $1 
             WHERE scroll_id = $2")
-            .bind(prompt.prompt_id.clone())
-            .bind(scroll.scroll_id.clone())
+            .bind(&prompt.prompt_id)
+            .bind(&scroll.scroll_id)
             .execute(pool)
             .await
             .unwrap();
@@ -177,7 +177,7 @@ pub async fn update_scroll(pool: &SqlitePool, scroll: &Scroll, prompt: &Prompt) 
         "SELECT * 
         FROM prompts 
         WHERE scroll_id = $1;") // Find last prompt
-        .bind(prompt.scroll_id.clone())
+        .bind(&prompt.scroll_id)
         .fetch_all(pool)
         .await
         .unwrap();
