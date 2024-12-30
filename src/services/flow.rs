@@ -1,12 +1,13 @@
 use std::io;
 use std::io::Write;
-use sqlx::{Row, Result, SqlitePool};
+use sqlx::{Result, SqlitePool};
 
+use crate::services::model::get_openai_response;
 use crate::services::ui::usr_ask;
 use crate::{
     services::search::select_files, 
     utils::{
-        db_utils::{get_projects, get_scrolls, store_files, store_project, store_prompt, store_scroll, get_files, get_prompts_from_scroll, update_scroll}, 
+        db_utils::{get_projects, get_scrolls, store_files, store_project, store_prompt, store_scroll, get_files, get_prompts_from_scroll, update_scroll, update_prompt}, 
         file_utils::{get_contents, read_files}, 
         prompt_utils::construct_system_prompt, 
         structs::{File, Project, Prompt, Scroll}
@@ -149,10 +150,16 @@ async fn ask_ctrl(pool: &SqlitePool, project: &Project, scroll: &Scroll)-> Resul
     let system_prompt = construct_system_prompt(&files).await.unwrap();
 
     let prompts: Vec<Prompt> = get_prompts_from_scroll(pool, &scroll).await.unwrap();
+    let user_prompt = prompts.last().unwrap();
 
     println!("\n--- Displaying Prompts ---");
     println!("System Prompt:\n{}", system_prompt);
-    println!("User Prompt:\n{:?}", prompts.last().unwrap());
+    println!("User Prompt:\n{:?}", user_prompt);
+    
+    let answer = get_openai_response(&system_prompt, &user_prompt.content).await.unwrap();
+    println!("Answer: \n {:?}", answer);
+
+    let _ = update_prompt(pool, &user_prompt, &answer).await.unwrap();
 
     Ok(())
 

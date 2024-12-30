@@ -2,7 +2,6 @@ use futures::future;
 use crate::utils::structs::{Project, File, Scroll, Prompt};
 use sqlx::{migrate::MigrateDatabase, sqlite::SqlitePool, Sqlite};
 use anyhow::Result;
-//use std::collections::HashSet;
 
 pub async fn get_db_pool(db_url: &str) -> Result<SqlitePool> {
     if !Sqlite::database_exists(db_url).await.unwrap_or(false) {
@@ -202,6 +201,22 @@ pub async fn update_scroll(pool: &SqlitePool, scroll: &Scroll, prompt: &Prompt) 
     }
 
     Ok(())
+}
+
+pub async fn update_prompt(pool: &SqlitePool, prompt: &Prompt, answer: &str) -> Result<()>{
+
+    sqlx::query(
+        "UPDATE prompts 
+        SET output = $1 
+        WHERE prompt_id = $2")
+        .bind(&answer)
+        .bind(&prompt.prompt_id)
+        .execute(pool)
+        .await
+        .unwrap();
+
+    Ok(())
+
 }
 
 // Sorted from first to last prompt on the list
