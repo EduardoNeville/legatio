@@ -7,12 +7,15 @@ use crate::services::ui::usr_ask;
 use crate::{
     services::search::select_files, 
     utils::{
-        db_utils::{get_projects, get_scrolls, store_files, store_project, store_prompt, store_scroll, get_files, get_prompts_from_scroll, update_scroll, update_prompt}, 
         file_utils::{get_contents, read_files}, 
         prompt_utils::construct_system_prompt, 
         structs::{File, Project, Prompt, Scroll}
     }
 };
+use crate::db::project::{store_project, get_projects};
+use crate::db::file::{store_files, get_files};
+use crate::db::scroll::{store_scroll, get_scrolls, update_scroll};
+use crate::db::prompt::{store_prompt, get_prompts_from_scroll, update_prompt};
 
 pub async fn flow(pool: &SqlitePool)-> Result<()> {
 

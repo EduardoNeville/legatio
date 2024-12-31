@@ -4,6 +4,7 @@ use utils::db_utils::get_db_pool;
 
 mod services;
 mod utils;
+mod db;
 
 use anyhow::Result;
 
