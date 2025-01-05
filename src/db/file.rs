@@ -51,7 +51,7 @@ pub async fn store_files(pool: &SqlitePool, files: &[File]) -> Result<()> {
     Ok(())
 }
 
-pub async fn get_files(pool: &SqlitePool, project_id: &String)-> Result<Vec<File>> {
+pub async fn get_files(pool: &SqlitePool, project_id: &str)-> Result<Vec<File>> {
     let files_result: Vec<File> = sqlx::query_as::<_, File>(
         "SELECT *
         FROM files 

@@ -54,5 +54,11 @@ futures = "0.3.31"
 
 # Models
 openai-api-rs = "5.2.4"
+
+# Ui
 ratatui = "0.29.0"
 crossterm = "0.28.1"
+
+# Syntax
+syntect = "5.2"
+chrono = "0.4.39"

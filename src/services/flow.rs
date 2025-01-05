@@ -4,6 +4,7 @@ use sqlx::{Result, SqlitePool};
 
 use crate::services::model::get_openai_response;
 use crate::services::ui::usr_ask;
+//use crate::utils::db_utils::highlight_text;
 use crate::{
     services::search::select_files, 
     utils::{
@@ -18,11 +19,9 @@ use crate::db::scroll::{store_scroll, get_scrolls, update_scroll};
 use crate::db::prompt::{store_prompt, get_prompts_from_scroll, update_prompt};
 
 pub async fn flow(pool: &SqlitePool)-> Result<()> {
-
     let home = String::from("/home/eduardoneville/Desktop/");
 
     loop {
-
         let projects = get_projects(pool).await.unwrap();
         let mut sel = String::from("Select your project: \n");
         for (idx, project) in projects.iter().enumerate() {
@@ -80,8 +79,7 @@ pub async fn flow(pool: &SqlitePool)-> Result<()> {
                 },
                 2 => {
                     let _ = store_scroll(pool, &scroll).await;
-                    let prompt = prompt_ctrl(pool, &scroll).await.unwrap();
-                    println!("Prompt created: \n {:?}", prompt);
+                    let _ = prompt_ctrl(pool, &scroll).await.unwrap();
                     sel_scroll = true;
                 },
                 3 => { sel_proj = false; },
@@ -94,8 +92,7 @@ pub async fn flow(pool: &SqlitePool)-> Result<()> {
 
                 match ans {
                     0 => {
-                        let prompt = prompt_ctrl(pool, &scroll).await.unwrap();
-                        println!("Prompt created: \n {:?}", prompt);
+                        let _ = prompt_ctrl(pool, &scroll).await.unwrap();
                     },
                     1 => {
                         let _ = ask_ctrl(pool, &project, &scroll).await;
@@ -134,8 +131,8 @@ async fn prompt_ctrl(pool: &SqlitePool, scroll: &Scroll)-> Result<Prompt> {
     let usr_prompt = Prompt::new(
         &scroll.scroll_id,
         &user_prompt,
-        &String::from(""),
-        &String::from("")
+        &String::new(),
+        &String::new()
     );
 
 
@@ -143,6 +140,8 @@ async fn prompt_ctrl(pool: &SqlitePool, scroll: &Scroll)-> Result<Prompt> {
 
     // Store the user's prompt
     store_prompt(&pool, &usr_prompt).await.unwrap();
+    //let txt = highlight_text("", &usr_prompt.content);
+    //println!("Prompt: \n {:?}", txt.unwrap());
 
     Ok(usr_prompt)
 }
@@ -152,7 +151,7 @@ async fn ask_ctrl(pool: &SqlitePool, project: &Project, scroll: &Scroll)-> Resul
 
     let system_prompt = construct_system_prompt(&files).await.unwrap();
 
-    let prompts: Vec<Prompt> = get_prompts_from_scroll(pool, &scroll).await.unwrap();
+    let prompts: Vec<Prompt> = get_prompts_from_scroll(pool, &scroll.scroll_id).await.unwrap();
     let user_prompt = prompts.last().unwrap();
 
     println!("\n--- Displaying Prompts ---");

@@ -26,12 +26,12 @@ pub async fn store_prompt(pool: &SqlitePool, prompt: &Prompt) -> Result<()> {
 }
 
 // Sorted from first to last prompt on the list
-pub async fn get_prompts_from_scroll(pool: &SqlitePool, scroll: &Scroll)-> Result<Vec<Prompt>> {
+pub async fn get_prompts_from_scroll(pool: &SqlitePool, scroll_id: &str)-> Result<Vec<Prompt>> {
     let prompts: Vec<Prompt> = sqlx::query_as::<_, Prompt>(
         "SELECT * 
         FROM prompts
         WHERE scroll_id = $1;")
-        .bind(&scroll.scroll_id)
+        .bind(scroll_id)
         .fetch_all(pool)
         .await
         .unwrap();
