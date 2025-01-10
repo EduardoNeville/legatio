@@ -63,3 +63,19 @@ pub async fn get_files(pool: &SqlitePool, project_id: &str)-> Result<Vec<File>> 
 
     Ok(files_result)
 }
+
+pub async fn delete_file(pool: &SqlitePool, file: &File) -> Result<()> {
+    log_info(&format!("Deleting file: {}", &file.file_id));
+
+    if let Err(error) =  sqlx::query("DELETE FROM files WHERE file_id=$1")
+        .bind(&file.file_id)
+        .execute(pool)
+        .await
+    {
+        log_error(&format!("Unable to DELETE file: {}", file.file_id));
+        return Err(error.into());
+    }
+    
+    log_info("Successfully deleted file");
+    Ok(())
+}

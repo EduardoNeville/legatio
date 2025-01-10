@@ -22,7 +22,7 @@ pub async fn store_scroll(pool: &SqlitePool, scroll: &Scroll) -> Result<()> {
 }
 
 /// Retrieves scrolls for a specific project.
-pub async fn get_scrolls(pool: &SqlitePool, project_id: &String) -> Result<Vec<Scroll>> {
+pub async fn get_scrolls(pool: &SqlitePool, project_id: &str) -> Result<Vec<Scroll>> {
     log_info("Fetching scrolls for a project");
 
     let results = sqlx::query_as::<_, Scroll>(
@@ -81,5 +81,21 @@ pub async fn update_scroll(pool: &SqlitePool, scroll: &Scroll, prompt: &Prompt) 
         println!("No matching prompt found.");
     }
 
+    Ok(())
+}
+
+pub async fn delete_scroll(pool: &SqlitePool, scroll: &Scroll) -> Result<()> {
+    log_info(&format!("Deleting scroll: {}", &scroll.scroll_id));
+
+    if let Err(error) =  sqlx::query("DELETE FROM scrolls WHERE scroll_id = $1")
+        .bind(&scroll.scroll_id)
+        .execute(pool)
+        .await
+    {
+        log_error(&format!("Unable to DELETE scroll: {}", scroll.scroll_id));
+        return Err(error.into());
+    }
+    
+    log_info("Successfully deleted scroll");
     Ok(())
 }

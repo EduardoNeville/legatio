@@ -1,6 +1,15 @@
 use sqlx::FromRow;
 use uuid::Uuid;
 
+pub enum AppState {
+    NewProject,
+    EditProject(Project),
+    NewScroll(Project),
+    EditScroll(Project, Scroll),
+    EditPrompt(Project, Scroll),
+    EditFiles(Project, Scroll),
+}
+
 #[derive(Clone, FromRow, Debug)]
 pub struct Project {
     pub project_id: String,
@@ -8,14 +17,13 @@ pub struct Project {
 }
 
 impl Project {
-    pub fn new(path: &String) -> Project {
+    pub fn new(path: &str) -> Project {
         Project {
             project_id: Uuid::new_v4().to_string(),
             project_path: path.to_string(),
         }
     }
 }
-
 
 #[derive(Clone, FromRow, Debug)]
 pub struct File {
@@ -46,13 +54,13 @@ pub struct Prompt {
 }
 
 impl Prompt {
-    pub fn new(scroll_id: &String, content: &String, output: &String, next_prompt_id: &String) -> Prompt {
+    pub fn new(scroll_id: &str, content: &str, output: &str, next_prompt_id: &str) -> Prompt {
         Prompt {
             prompt_id: Uuid::new_v4().to_string(),
             scroll_id: scroll_id.to_string(),
             content: content.to_string(),
             output: output.to_string(),
-            next_prompt_id: next_prompt_id.to_string()
+            next_prompt_id: next_prompt_id.to_string(),
         }
     }
 }
@@ -65,7 +73,7 @@ pub struct Scroll {
 }
 
 impl Scroll {
-    pub fn new(project_id: &String, init_prompt_id: &String) -> Scroll {
+    pub fn new(project_id: &str, init_prompt_id: &str) -> Scroll {
         Scroll {
             scroll_id: Uuid::new_v4().to_string(),
             project_id: project_id.to_string(),

@@ -12,7 +12,7 @@ use crate::db::file::get_files;
 use crate::db::prompt::get_prompts_from_scroll;
 use crate::utils::structs::{Project, Scroll};
 
-pub fn usr_ask(sel: &String)-> Result<usize> {
+pub fn usr_ask(sel: &str)-> Result<usize> {
     println!("{}", sel);
     io::stdout().flush()?;
 
