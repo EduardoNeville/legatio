@@ -18,11 +18,12 @@ async fn main() -> Result<()> {
     env_logger::init();
     let db_url = "sqlite://legatio.db";
     let pool = get_db_pool(&db_url).await.unwrap();
-    let terminal = ratatui::init();
-    let result = AppState::new().run(&pool, terminal).await;
-    ratatui::restore();
-    return result;
+    let _ = flow(&pool).await;
+    Ok(())
+    //let terminal = ratatui::init();
+    //let result = AppState::new().run(&pool, terminal).await;
+    //ratatui::restore();
+    //return result;
     
-    //let _ = flow(&pool).await;
 }
 

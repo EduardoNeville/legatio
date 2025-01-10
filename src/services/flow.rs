@@ -18,6 +18,8 @@ use crate::db::file::{store_files, get_files};
 use crate::db::scroll::{store_scroll, get_scrolls, update_scroll};
 use crate::db::prompt::{store_prompt, get_prompts_from_scroll, update_prompt};
 
+use super::ui::{usr_files, usr_prompts};
+
 pub async fn flow(pool: &SqlitePool)-> Result<()> {
     let home = String::from("/home/eduardoneville/Desktop/");
 
@@ -65,12 +67,9 @@ pub async fn flow(pool: &SqlitePool)-> Result<()> {
             let mut scroll = Scroll::new(&project.project_id, &String::from(""));
             match ans {
                 0 => {
-                    let files = file_ctrl(pool, &project).await.unwrap();
+                    let files = file_append_ctrl(pool, &project).await.unwrap();
+                    let _ = usr_files(pool, &project).await.unwrap();
 
-                    println!("Current files: \n");
-                    for (idx, row) in files.iter().enumerate() {
-                        println!(" [{}]: {} \n", idx, row.file_path.split("/").last().unwrap());
-                    }
                 },
                 1 => {
                     scroll = scroll_ctrl(pool, &project).await.unwrap();
@@ -87,8 +86,10 @@ pub async fn flow(pool: &SqlitePool)-> Result<()> {
             }
 
             while sel_scroll {
+                let _ = usr_files(pool, &project);
+                let _ = usr_prompts(pool, &scroll);
 
-                let ans = usr_ask(&String::from(" [0] Write prompt into scroll \n [1] Ask model \n [2] Change scroll \n [3] Change project")).unwrap();
+                let ans = usr_ask(&String::from(" [0] Write prompt into scroll \n [1] Ask model \n [2] Append Files \n [3] Change scroll \n [4] Change project")).unwrap();
 
                 match ans {
                     0 => {
@@ -97,8 +98,16 @@ pub async fn flow(pool: &SqlitePool)-> Result<()> {
                     1 => {
                         let _ = ask_ctrl(pool, &project, &scroll).await;
                     },
-                    2 => { sel_scroll = false; },
-                    3 => { sel_proj = false; sel_scroll = false; }
+                    2 => {
+                        let files = file_append_ctrl(pool, &project).await.unwrap();
+
+                        println!("Current files: \n");
+                        for (idx, row) in files.iter().enumerate() {
+                            println!(" [{}]: {} \n", idx, row.file_path.split("/").last().unwrap());
+                        }
+                    },
+                    3 => { sel_scroll = false; },
+                    4 => { sel_proj = false; sel_scroll = false; }
                     _   => println!("Give an answer!"),
                 }
                 
@@ -107,8 +116,8 @@ pub async fn flow(pool: &SqlitePool)-> Result<()> {
     }
 }
 
-async fn file_ctrl(pool: &SqlitePool, project: &Project)-> Result<Vec<File>> {
-    let files_in_dir = get_contents(&project.project_path, false, 7);
+async fn file_append_ctrl(pool: &SqlitePool, project: &Project)-> Result<Vec<File>> {
+    let files_in_dir = get_contents(&project.project_path, false, 20);
     let selected_files = select_files(files_in_dir.unwrap(), true).unwrap();
     let files = read_files(&selected_files, &project.project_id).unwrap();
     store_files(&pool, &files)
