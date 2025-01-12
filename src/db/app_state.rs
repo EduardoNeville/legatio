@@ -3,18 +3,16 @@ use std::result::Result::Ok;
 use std::fs;
 use std::io::ErrorKind;
 
-use crate::ui::app::AppState;
 use crate::utils::logger::log_error;
 
-
-pub fn store_app_state(app_state: &AppState) {
+pub fn store_app_state(app_state: &str) {
     let app_state = serde_json::to_string(&app_state).unwrap();
     let mut file = File::create("config.json").expect("Could not create file!");
     file.write(app_state.as_bytes()).unwrap();
 }
 
 
-pub async fn get_app_state() -> Result<AppState, ()> {
+pub async fn get_app_state() -> Result<()> {
     // Attempt to read the `config.json` file
     let file_content = match fs::read_to_string("config.json") {
         Ok(content) => content,
@@ -30,7 +28,7 @@ pub async fn get_app_state() -> Result<AppState, ()> {
     };
 
     // Attempt to parse JSON into AppState
-    let app_state: AppState = match serde_json::from_str(&file_content) {
+    let app_state = match serde_json::from_str(&file_content) {
         Ok(state) => state,
         Err(error) => {
             log_error(&format!("Error: Failed to parse `config.json`: {}", error));

@@ -9,8 +9,8 @@ use syntect::highlighting::{ThemeSet, Style};
 use syntect::util::{as_24_bit_terminal_escaped, LinesWithEndings};
 
 use crate::db::file::get_files;
-use crate::db::prompt::get_prompts_from_scroll;
-use crate::utils::structs::{Project, Scroll};
+use crate::db::prompt::get_prompts;
+use crate::utils::structs::{ Project, Prompt };
 
 pub fn usr_ask(sel: &str)-> Result<usize> {
     println!("{}", sel);
@@ -52,17 +52,41 @@ pub async fn usr_files(pool: &SqlitePool, project: &Project) -> Result<()> {
     Ok(())
 }
 
-pub async fn usr_prompts(pool: &SqlitePool, scroll: &Scroll) -> Result<()> {
-    let prompts = get_prompts_from_scroll(pool, &scroll.scroll_id).await.unwrap();
-    let curr_prompt = prompts.iter().find(|p| p.prompt_id == scroll.init_prompt_id).unwrap();
+async fn helper_print(prompts: &Vec<Prompt>, prompt: &Prompt, depth: &usize)-> Result<()> {
+    let child_prompts: Vec<&Prompt> = prompts.iter().filter(
+        |p| &p.prev_prompt_id == &prompt.prompt_id
+    ).collect();
+    
+    let b_depth = "| ".repeat(*depth);
+    println!("{:?}", b_depth);
+    println!(
+        "{:?}- [{:?}] Content: {:?} \n{:?}  Output: {:?}",
+        b_depth,
+        prompt.idx,
+        prompt.content.get(0..20),
+        b_depth,
+        prompt.output.get(0..20)
+    );
 
-    let mut counter = 0;
-    while curr_prompt.next_prompt_id != "" {
-        println!("[{}] Prompt - Content", counter);
-        highlight(&curr_prompt.content, "md");
-        println!("[{}] Prompt - Answer", counter);
-        highlight(&curr_prompt.output, "md");
-        counter = counter + 1;
+    let new_depth = depth + 1;
+    if child_prompts.len() != 0 {
+        child_prompts.iter().map(|p| helper_print(prompts, &p, &new_depth));
+    }
+
+    Ok(())
+}
+
+pub async fn usr_prompts(pool: &SqlitePool, project_id: &str) -> Result<()> {
+    let prompts = get_prompts(pool, &project_id).await.unwrap();
+
+    let depth = 0;
+    let fst_prompts: Vec<&Prompt> = prompts.iter().filter(
+        |p| &p.prev_prompt_id == &project_id
+    ).collect();
+    
+    let idx = 0;
+    for fst_prompt in fst_prompts.iter() {
+        helper_print(&prompts, fst_prompt, &depth).await.unwrap();
     }
 
     Ok(())

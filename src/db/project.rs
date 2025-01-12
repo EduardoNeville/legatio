@@ -38,15 +38,15 @@ pub async fn get_projects(pool: &SqlitePool) -> Result<Vec<Project>> {
     }
 }
 
-pub async fn delete_project(pool: &SqlitePool, project: &Project) -> Result<()> {
-    log_info(&format!("Deleting project: {}", &project.project_id));
+pub async fn delete_project(pool: &SqlitePool, project_id: &str) -> Result<()> {
+    log_info(&format!("Deleting project: {}", &project_id));
 
     if let Err(error) =  sqlx::query("DELETE FROM projects WHERE project_id = $1")
-        .bind(&project.project_id)
+        .bind(&project_id)
         .execute(pool)
         .await
     {
-        log_error(&format!("Unable to DELETE project: {}", project.project_id));
+        log_error(&format!("Unable to DELETE project: {}", project_id));
         return Err(error.into());
     }
     

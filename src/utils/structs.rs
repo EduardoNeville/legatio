@@ -3,11 +3,10 @@ use uuid::Uuid;
 
 pub enum AppState {
     NewProject,
-    EditProject(Project),
-    NewScroll(Project),
-    EditScroll(Project, Scroll),
-    EditPrompt(Project, Scroll),
-    EditFiles(Project, Scroll),
+    SelectProject(Project),
+    SelectPrompt(Project),
+    AskModel(Project, Prompt),
+    EditFiles(Project),
 }
 
 #[derive(Clone, FromRow, Debug)]
@@ -47,37 +46,23 @@ impl File {
 #[derive(Clone, FromRow, Debug)]
 pub struct Prompt {
     pub prompt_id: String,
-    pub scroll_id: String,
+    pub project_id: String,
     pub content: String,
     pub output: String,
-    pub next_prompt_id: String,
+    pub prev_prompt_id: String,
+    pub idx: i32,
 }
 
 impl Prompt {
-    pub fn new(scroll_id: &str, content: &str, output: &str, next_prompt_id: &str) -> Prompt {
+    pub fn new(project_id: &str, content: &str, output: &str, prev_prompt_id: &str, idx: &i32) -> Prompt {
         Prompt {
             prompt_id: Uuid::new_v4().to_string(),
-            scroll_id: scroll_id.to_string(),
+            project_id: project_id.to_string(),
             content: content.to_string(),
             output: output.to_string(),
-            next_prompt_id: next_prompt_id.to_string(),
+            prev_prompt_id: prev_prompt_id.to_string(),
+            idx: *idx,
         }
     }
 }
 
-#[derive(Clone, FromRow, Debug)]
-pub struct Scroll {
-    pub scroll_id: String,
-    pub project_id: String,
-    pub init_prompt_id: String,
-}
-
-impl Scroll {
-    pub fn new(project_id: &str, init_prompt_id: &str) -> Scroll {
-        Scroll {
-            scroll_id: Uuid::new_v4().to_string(),
-            project_id: project_id.to_string(),
-            init_prompt_id: init_prompt_id.to_string(),
-        }
-    }
-}
