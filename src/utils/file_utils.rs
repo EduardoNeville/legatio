@@ -1,7 +1,7 @@
 use std::fs;
 use rayon::prelude::*;
 use anyhow::Result;
-use crate::utils::structs::File;
+use crate::utils::structs::Scroll;
 use std::path::PathBuf;
 
 const IGNORE_LIST: &[&str] = &[
@@ -63,11 +63,11 @@ pub fn get_contents(
 }
 
 
-pub fn read_files(file_paths: &[String], project_id: &String) -> Result<Vec<File>> {
+pub fn read_files(file_paths: &[String], project_id: &String) -> Result<Vec<Scroll>> {
     file_paths.par_iter()
         .map(|path| {
             let content = fs::read_to_string(path)?;
-            Ok(File::new(&path, &content, &project_id))
+            Ok(Scroll::new(&path, &content, &project_id))
         })
         .collect()
 }

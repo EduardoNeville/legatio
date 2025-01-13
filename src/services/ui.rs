@@ -8,7 +8,7 @@ use syntect::parsing::SyntaxSet;
 use syntect::highlighting::{ThemeSet, Style};
 use syntect::util::{as_24_bit_terminal_escaped, LinesWithEndings};
 
-use crate::db::file::get_files;
+use crate::db::scroll::get_scrolls;
 use crate::db::prompt::get_prompts;
 use crate::utils::structs::{ Project, Prompt };
 
@@ -40,13 +40,13 @@ pub fn highlight(s: &str, extension: &str) {
     }
 }
 
-pub async fn usr_files(pool: &SqlitePool, project: &Project) -> Result<()> {
-    let files = get_files(pool, &project.project_id).await.unwrap();
-    println!("Current files: \n");
-    for (idx, row) in files.iter().enumerate() {
-        let filename = row.file_path.split("/").last().unwrap();
-        println!(" [{}]: {} \n", idx, filename);
-        highlight(&row.content, filename.split(".").last().unwrap()); 
+pub async fn usr_scrolls(pool: &SqlitePool, project: &Project) -> Result<()> {
+    let scrolls = get_scrolls(pool, &project.project_id).await.unwrap();
+    println!("Current scrolls: \n");
+    for (idx, row) in scrolls.iter().enumerate() {
+        let scrollname = row.scroll_path.split("/").last().unwrap();
+        println!(" [{}]: {} \n", idx, scrollname);
+        highlight(&row.content, scrollname.split(".").last().unwrap()); 
     }
 
     Ok(())
@@ -84,7 +84,6 @@ pub async fn usr_prompts(pool: &SqlitePool, project_id: &str) -> Result<()> {
         |p| &p.prev_prompt_id == &project_id
     ).collect();
     
-    let idx = 0;
     for fst_prompt in fst_prompts.iter() {
         helper_print(&prompts, fst_prompt, &depth).await.unwrap();
     }

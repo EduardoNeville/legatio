@@ -3,10 +3,10 @@ use uuid::Uuid;
 
 pub enum AppState {
     NewProject,
-    SelectProject(Project),
-    SelectPrompt(Project),
-    AskModel(Project, Prompt),
-    EditFiles(Project),
+    SelectProject,
+    SelectPrompt,
+    AskModel,
+    EditScrolls,
 }
 
 #[derive(Clone, FromRow, Debug)]
@@ -25,18 +25,18 @@ impl Project {
 }
 
 #[derive(Clone, FromRow, Debug)]
-pub struct File {
-    pub file_id: String,
-    pub file_path: String,
+pub struct Scroll {
+    pub scroll_id: String,
+    pub scroll_path: String,
     pub content: String,
     pub project_id: String,
 }
 
-impl File {
-    pub fn new(path: &String, content: &String, project_id: &String) -> File {
-        File {
-            file_id: Uuid::new_v4().to_string(),
-            file_path: path.to_string(),
+impl Scroll {
+    pub fn new(path: &String, content: &String, project_id: &String) -> Scroll {
+        Scroll {
+            scroll_id: Uuid::new_v4().to_string(),
+            scroll_path: path.to_string(),
             content: content.to_string(),
             project_id: project_id.to_string(),
         }
