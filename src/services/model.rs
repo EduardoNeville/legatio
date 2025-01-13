@@ -4,6 +4,8 @@ use openai_api_rs::v1::common::GPT4_O_LATEST; // Select model as per your use ca
 use std::env;
 use anyhow::{Result, Context};
 
+use super::ui::highlight;
+
 pub async fn get_openai_response(system_prompt: &str, user_input: &str) -> Result<String> {
     // Retrieve the OpenAI API key from the environment securely
     let api_key = env::var("OPENAI_API_KEY")
@@ -44,8 +46,7 @@ pub async fn get_openai_response(system_prompt: &str, user_input: &str) -> Resul
 
     let result = client.chat_completion(req).await.unwrap();
     let answer = result.choices[0].message.content.clone().unwrap();
-    println!("Content: {:?}", answer);
-    println!("Response Headers: {:?}", result.headers);
+    highlight(&answer, "md");
 
     return Ok(answer)
 }

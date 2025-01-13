@@ -271,22 +271,19 @@ impl Legatio {
                         &user_input
                     ).await.unwrap();
                     
+                    let (prev_id, idx) = match &self.current_prompt.as_ref() {
+                        Some(p) => (&p.prev_prompt_id, &p.idx),
+                        _ => (&self.current_project.as_ref().unwrap().project_id, &1),
+                    };
+
                     let lst_prompt = Prompt::new(
                         &self.current_project.as_ref().unwrap().project_id,
                         &curr_prompt,
                         &output,
-                        if self.current_prompt.is_some() {
-                            &self.current_prompt.as_ref().unwrap().prompt_id
-                        } else {
-                            &self.current_project.as_ref().unwrap().project_id
-                        },
-                        if self.current_prompt.is_some() {
-                            &(self.current_prompt.as_ref().unwrap().idx + 1)
-                        } else {
-                            &1
-                        },
+                        &prev_id,
+                        &idx
                     );
-                    store_prompt(pool, &lst_prompt);
+                    store_prompt(pool, &lst_prompt).await.unwrap();
 
                 }, 
                 2 => { 
