@@ -1,6 +1,3 @@
-use std::borrow::Borrow;
-
-use anyhow::Result;
 use super::structs::{Scroll, Prompt};
 
 pub fn system_prompt(scrolls: &[Scroll])-> String {

@@ -1,11 +1,21 @@
-use std::{fs::{self, File}, io::Write, path::PathBuf};
+use std::{
+    fs::{self, File},
+    io::Write, 
+    path::PathBuf
+};
 
 use sqlx::{Result, SqlitePool};
 use crate::{
     db::{
-        project::{delete_project, get_projects, store_project}, prompt::{get_prompts, store_prompt}, scroll::{delete_scroll, get_scrolls, store_scrolls}
+        project::{delete_project, get_projects, store_project},
+        prompt::{get_prompts, store_prompt},
+        scroll::{delete_scroll, get_scrolls, store_scrolls}
     },
-    services::{model::get_openai_response, search::select_files, ui::usr_ask},
+    services::{
+        model::get_openai_response, 
+        search::select_files, 
+        ui::{clear_screen, usr_ask, usr_prompt_chain, usr_scrolls}
+    },
     utils::{
         file_utils::{get_contents, read_files}, 
         prompt_utils::{prompt_chain, system_prompt},
@@ -74,6 +84,7 @@ impl Legatio {
         println!("Welcome! You do not have a project yet.");
 
         loop {
+            clear_screen();
             println!("Options:\n[1]: Create a new project\n[2]: Exit");
 
             let choice = usr_ask("Enter your choice: ").unwrap();
@@ -90,7 +101,7 @@ impl Legatio {
                     store_project(pool, &project).await.unwrap();
                     println!("Project '{}' created.", project.project_path);
                     self.current_project = Some(project.clone());
-                    return Ok(AppState::AskModel);
+                    return Ok(AppState::EditScrolls);
                 }
                 2 => {
                     println!("Exiting the application...");
@@ -108,6 +119,7 @@ impl Legatio {
         pool: &SqlitePool,
     ) -> Result<AppState> {
         loop {
+            clear_screen();
             let projects = get_projects(pool).await.unwrap();
             println!("Edit Project:");
 
@@ -120,9 +132,9 @@ impl Legatio {
             }
 
             let projects_len = projects.len();
-            println!("[{}]: New Project", projects_len);
-            println!("[{}]: Delete Current Project", projects_len + 1);
-            println!("[{}]: Exit", projects_len + 2);
+            println!(" [{}]: New Project", projects_len);
+            println!(" [{}]: Delete Current Project", projects_len + 1);
+            println!(" [{}]: Exit", projects_len + 2);
 
             let choice = usr_ask("Enter your choice: ").unwrap();
 
@@ -160,51 +172,83 @@ impl Legatio {
         pool: &SqlitePool,
     ) -> Result<AppState> {
         loop {
+            clear_screen();
+
+            // Show prompts
             let prompts = get_prompts(
                 pool,
                 &self.current_project.as_ref().unwrap().project_id
             ).await.unwrap();
 
+            let sel_prompt: Option<Prompt> = None;
+            let mut concat_prompts: Vec<String> = vec![];
             if !prompts.is_empty() {
                 println!("Select a prompt branch: ");
                 usr_prompts(
                     pool,
                     &self.current_project.as_ref().unwrap().project_id
                 ).await.unwrap();
-            }
+                let _ = prompts.iter().enumerate().map(|(i,p)| {
+                    concat_prompts.push(format!(
+                        "[{:?}] Content: {:?} Output: {:?}",
+                        &i,
+                        &p.content.get(0..30).unwrap(),
+                        &p.output.get(0..30).unwrap(),
+                    ));
+                });
 
-            let prompts_len = prompts.len();
-            println!("[{}]: Delete Prompt", prompts_len + 1);
-            println!("[{}]: Select Project", prompts_len + 2);
+                println!("[0]: Select Prompt");
 
-            let choice = usr_ask("Enter your choice: " ).unwrap();
-
-            if choice < prompts_len {
-                let prompt = prompts.iter()
-                    .find(|p| p.idx == choice as i32);
-                self.current_prompt = Some(prompt.unwrap().to_owned());
-
-                return Ok(AppState::AskModel);
-            } else if choice == prompts_len {
-                todo!("Delete prompt");
-            } else if choice == prompts_len + 1 {
-                return Ok(AppState::SelectProject);
             } else {
-                println!("Invalid input, try again.");
+                println!("This project has no prompts!");
+                return Ok(AppState::AskModel)
+            }
+            println!("[1]: Delete Prompt");
+            println!("[2]: Select Project");
+
+            let choice: usize = usr_ask("Enter your choice: " ).unwrap();
+            match choice {
+                0 => {
+                    if !prompts.is_empty() {
+                        let sel_idx: usize = select_files(concat_prompts, false).unwrap();
+                        self.current_prompt = Some(prompts.get(sel_idx));
+                        return Ok(AppState::AskModel);
+                    } else {
+                        println!("Invalid input, try again.");
+
+                    }
+
+                },
+                1 => {
+                    todo!("Delete prompt");
+                },
+                2 => {
+                    return Ok(AppState::SelectProject);
+                },
+                _ => {
+                    println!("Invalid input, try again.");
+                }
             }
         }
     }
 
     async fn handle_ask_model(
-        &self,
+        &mut self,
         pool: &SqlitePool,
     ) -> Result<AppState> {
         loop {
-
+            // Preparing scrolls 
             let scrolls = get_scrolls(
                 pool,
                 &self.current_project.as_ref().unwrap().project_id
             ).await.unwrap();
+
+            usr_scrolls(
+                pool,
+                &self.current_project.as_ref().unwrap()
+            ).await.unwrap();
+
+            // Preparing prompts
             let prompt = &self.current_prompt;
             let curr_prompt = fs::read_to_string(
                 &PathBuf::from(
@@ -219,15 +263,31 @@ impl Legatio {
                     ).join("legatio.md")
                 ).expect("Could not create file!");
 
+                //IDK about this.
                 for (i,f) in scrolls.iter().enumerate() { 
                     let scroll_name = format!(
-                        "[{}] {:?}",
+                        "Files:\n[{}] {:?}",
                         i,
-                        f.scroll_path.split("/").last()
+                        f.scroll_path.split("/").last().unwrap()
                     );
                     file.write(&scroll_name.as_bytes()).unwrap();
                 }
+            } else {
+
+                let prompts = get_prompts(
+                    pool, 
+                    &self.current_project.as_ref().unwrap().project_id
+                ).await.unwrap();
+
+                let pmp_chain: Vec<Prompt> = prompt_chain(
+                    &prompts,
+                    &self.current_prompt.as_ref().unwrap()
+                );
+
+                let _ = usr_prompt_chain(&pmp_chain);
+
             }
+
 
             // Menu
             println!("Select an option:");
@@ -271,20 +331,20 @@ impl Legatio {
                         &user_input
                     ).await.unwrap();
                     
-                    let (prev_id, idx) = match &self.current_prompt.as_ref() {
-                        Some(p) => (&p.prev_prompt_id, &p.idx),
-                        _ => (&self.current_project.as_ref().unwrap().project_id, &1),
+                    let prev_id = match &self.current_prompt.as_ref() {
+                        Some(p) => &p.prev_prompt_id,
+                        _ => &self.current_project.as_ref().unwrap().project_id,
                     };
 
-                    let lst_prompt = Prompt::new(
+                    let mut lst_prompt = Prompt::new(
                         &self.current_project.as_ref().unwrap().project_id,
                         &curr_prompt,
                         &output,
                         &prev_id,
-                        &idx
                     );
-                    store_prompt(pool, &lst_prompt).await.unwrap();
+                    store_prompt(pool, &mut lst_prompt).await.unwrap();
 
+                    self.current_prompt = Some(lst_prompt);
                 }, 
                 2 => { 
                     return Ok(AppState::SelectPrompt)
@@ -299,7 +359,6 @@ impl Legatio {
                     println!("Invalid index.");
                 }
             }
-
         }
     }
 
@@ -320,7 +379,7 @@ impl Legatio {
             }
 
             // Menu
-            println!("Select an option: \n [{}]. Append a Scroll \n [{}]. Remove a Scroll \n [{}]. Select Prompt \n [{}]. Select Project",
+            println!("Select an option: \n [{}] Append a Scroll \n [{}] Remove a Scroll \n [{}] Select Prompt \n [{}] Select Project",
                 scrolls.len(),
                 scrolls.len() + 1,
                 scrolls.len() + 2,

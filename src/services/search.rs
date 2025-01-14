@@ -1,36 +1,32 @@
-use skim::prelude::*;
+use nucleo::*;
 use anyhow::Result;
-use std::io::Cursor;
 
-pub fn select_files(file_list: Vec<String>, multi: bool) -> Result<Vec<String>> {
-    let options = SkimOptionsBuilder::default()
-        .multi(multi)
-        .bind(vec!["change:reload(cat {})"])
-        .build()
-        .unwrap();
-
-    let item_reader = SkimItemReader::default();
-
-    // Join the file list into a single string
+pub fn select_files(file_list: Vec<String>, multi: bool) -> Result<Vec<usize>> {
+    // Join file list into a single string, where each file is on a new line
     let input = file_list.join("\n");
 
-    // Convert the string into a Vec<u8>, so we own the data
-    let bytes = input.into_bytes();
+    // Create a query matcher using `nucleo`
+    let mut query_engine = QueryEngine::new()
+        .case_insensitive(true) // Enable case-insensitive matching
+        .multiple_selections(multi); // Allow multiple selections if `multi` is true
 
-    // Create a Cursor over the Vec<u8>, which implements BufRead + Send + 'static
-    let cursor = Cursor::new(bytes);
+    // Populate the query engine with entries from the file list
+    query_engine.add_values(
+        file_list
+            .into_iter()
+            .enumerate()
+            .map(|(index, value)| (index, value)),
+    );
 
-    // Pass the Cursor to of_bufread
-    let items = item_reader.of_bufread(cursor);
+    // Run the query engine to process user input
+    let selected_indices = query_engine.run(|state| {
+        // Optional: Display the search prompt and real-time results
+        let prompt = if multi { "Multi-select files:" } else { "Select a file:" };
+        state.display_prompt(prompt); // Customize the prompt message
+    })?;
 
-    let selected_items = Skim::run_with(&options, Some(items))
-        .map(|out| {
-            out.selected_items
-                .iter()
-                .map(|item| item.output().to_string())
-                .collect()
-        })
-        .unwrap_or_else(Vec::new);
+    // Extract selected indices
+    let sel_idxs = selected_indices.into_iter().collect::<Vec<usize>>();
 
-    Ok(selected_items)
+    Ok(sel_idxs)
 }

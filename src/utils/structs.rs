@@ -50,18 +50,16 @@ pub struct Prompt {
     pub content: String,
     pub output: String,
     pub prev_prompt_id: String,
-    pub idx: i32,
 }
 
 impl Prompt {
-    pub fn new(project_id: &str, content: &str, output: &str, prev_prompt_id: &str, idx: &i32) -> Prompt {
+    pub fn new(project_id: &str, content: &str, output: &str, prev_prompt_id: &str) -> Prompt {
         Prompt {
             prompt_id: Uuid::new_v4().to_string(),
             project_id: project_id.to_string(),
             content: content.to_string(),
             output: output.to_string(),
             prev_prompt_id: prev_prompt_id.to_string(),
-            idx: *idx,
         }
     }
 }

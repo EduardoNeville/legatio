@@ -46,7 +46,7 @@ pub async fn usr_scrolls(pool: &SqlitePool, project: &Project) -> Result<()> {
     for (idx, row) in scrolls.iter().enumerate() {
         let scrollname = row.scroll_path.split("/").last().unwrap();
         println!(" [{}]: {} \n", idx, scrollname);
-        highlight(&row.content, scrollname.split(".").last().unwrap()); 
+        //highlight(&row.content.get(0..50).unwrap(), scrollname.split(".").last().unwrap()); 
     }
 
     Ok(())
@@ -57,20 +57,18 @@ async fn helper_print(prompts: &Vec<Prompt>, prompt: &Prompt, depth: &usize)-> R
         |p| &p.prev_prompt_id == &prompt.prompt_id
     ).collect();
     
-    let b_depth = "| ".repeat(*depth);
-    println!("{:?}", b_depth);
+    let b_depth = "  |";
+    let _ = b_depth.repeat(*depth);
+    println!("{b_depth}");
     println!(
-        "{:?}- [{:?}] Content: {:?} \n{:?}  Output: {:?}",
-        b_depth,
-        prompt.idx,
-        prompt.content.get(0..20),
-        b_depth,
-        prompt.output.get(0..20)
+        "{b_depth}- Content: {:?} \n{b_depth}  Output: {:?}",
+        prompt.content.get(0..50).unwrap(),
+        prompt.output.get(0..50).unwrap()
     );
 
     let new_depth = depth + 1;
     if child_prompts.len() != 0 {
-        child_prompts.iter().map(|p| helper_print(prompts, &p, &new_depth));
+        let _ = child_prompts.iter().map(|p| helper_print(prompts, &p, &new_depth));
     }
 
     Ok(())
@@ -87,6 +85,24 @@ pub async fn usr_prompts(pool: &SqlitePool, project_id: &str) -> Result<()> {
     for fst_prompt in fst_prompts.iter() {
         helper_print(&prompts, fst_prompt, &depth).await.unwrap();
     }
+
+    Ok(())
+}
+
+pub fn clear_screen() {
+    // Print the escape sequence to clear the terminal
+    print!("\x1B[2J\x1B[H");
+    io::stdout().flush().unwrap();
+}
+
+pub fn usr_prompt_chain(prompts: &[Prompt]) -> Result<()> {
+    let _ = prompts.iter().map(|p| {
+        println!(
+            " |- Content: {:?} \n |   Output: {:?}",
+            p.content.get(0..50).unwrap(),
+            p.output.get(0..50).unwrap()
+        );
+    });
 
     Ok(())
 }

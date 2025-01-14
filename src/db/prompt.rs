@@ -1,29 +1,38 @@
-use sqlx::sqlite::SqlitePool;
+use sqlx::{sqlite::SqlitePool, Row};
 use anyhow::Result;
 use crate::utils::{
     logger::{log_error, log_info}, structs::Prompt
 };
 
 /// Stores a prompt into the database.
-pub async fn store_prompt(pool: &SqlitePool, prompt: &Prompt) -> Result<()> {
+pub async fn store_prompt(pool: &SqlitePool, prompt: &mut Prompt) -> Result<()> {
     log_info("Storing prompt in the database");
 
-    if let Err(error) = sqlx::query(
-        "INSERT INTO prompts (prompt_id, project_id, content, output, prev_prompt_id, idx) VALUES ($1, $2, $3, $4, $5, $6)")
-        .bind(&prompt.prompt_id)
-        .bind(&prompt.project_id)
-        .bind(&prompt.content)
-        .bind(&prompt.output)
-        .bind(&prompt.prev_prompt_id)
-        .bind(&prompt.idx)
-        .execute(pool)
-        .await
-    {
-        log_error(&format!("Failed to insert prompt: {}", error));
-        return Err(error.into());
-    }
+    // Use RETURNING clause (if supported by SQLite) to fetch the `prompt_id`.
+    let row = sqlx::query(
+        "INSERT INTO prompts (prompt_id, project_id, prev_prompt_id, content, output) 
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING idx"
+    )
+    .bind(&prompt.prompt_id)
+    .bind(&prompt.project_id)
+    .bind(&prompt.prev_prompt_id)
+    .bind(&prompt.content)
+    .bind(&prompt.output)
+    .fetch_one(pool)
+    .await;
 
-    Ok(())
+    match row {
+        Ok(returned_row) => {
+            // Extract the newly inserted `prompt_id`
+            prompt.idx = Some(returned_row.get(0));
+            Ok(())
+        }
+        Err(error) => {
+            log_error(&format!("Failed to insert prompt: {}", error));
+            Err(error.into())
+        }
+    }
 }
 
 // Sorted from first to last prompt on the list
