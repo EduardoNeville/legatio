@@ -29,11 +29,15 @@ pub fn highlight(s: &str, extension: &str) {
     // Load these once at the start of your program
     let ps = SyntaxSet::load_defaults_newlines();
     let ts = ThemeSet::load_defaults();
-    let theme = ts.themes["base16-ocean.dark"].clone();
+    let theme = ts.themes["base16-eighties.dark"].clone();
 
     let parser = Parser::new(s);
+    let default_syntax = ps.find_syntax_plain_text();
+    let mut syntax = ps
+        .find_syntax_by_extension(extension)
+        .unwrap_or(default_syntax);
+    let mut highlighter = HighlightLines::new(syntax, &theme);
 
-    let mut syntax = ps.find_syntax_by_extension(extension).unwrap();
     let mut code = String::new();
     let mut in_code_block = false;
 
@@ -43,28 +47,29 @@ pub fn highlight(s: &str, extension: &str) {
                 let lang = lang.trim();
                 syntax = ps
                     .find_syntax_by_token(lang)
-                    .unwrap_or_else(|| ps.find_syntax_plain_text());
+                    .unwrap_or(default_syntax);
+                highlighter = HighlightLines::new(syntax, &theme);
                 in_code_block = true;
             }
             Event::End(TagEnd::CodeBlock) => {
                 if in_code_block {
-                    let mut highlighter = HighlightLines::new(&syntax, &theme);
                     for line in LinesWithEndings::from(&code) {
                         let ranges: Vec<(Style, &str)> = highlighter.highlight_line(line, &ps).unwrap();
                         let escaped = as_24_bit_terminal_escaped(&ranges[..], true);
                         print!("{}", escaped);
                     }
-                    code.clear();
-                    in_code_block = false;
+                    code.clear(); // Clear the code buffer
+                    in_code_block = false; // Reset the flag
                 }
             }
             Event::Text(text) => {
                 if in_code_block {
-                    code.push_str(&text);
+                    code.push_str(&text); // Accumulate code text
                 } else {
-                    let mut highlighter = HighlightLines::new(&syntax, &theme);
+                    // If not inside a code block, process and highlight as plain text
+                    let mut plain_highlighter = HighlightLines::new(default_syntax, &theme);
                     for line in LinesWithEndings::from(&text) {
-                        let ranges: Vec<(Style, &str)> = highlighter.highlight_line(line, &ps).unwrap();
+                        let ranges: Vec<(Style, &str)> = plain_highlighter.highlight_line(line, &ps).unwrap();
                         let escaped = as_24_bit_terminal_escaped(&ranges[..], true);
                         print!("{}", escaped);
                     }
@@ -72,6 +77,17 @@ pub fn highlight(s: &str, extension: &str) {
             }
             _ => {}
         }
+    }
+
+    // Cleanup: If the loop ends and there is leftover code, clear it
+    if in_code_block && !code.is_empty() {
+        for line in LinesWithEndings::from(&code) {
+            let ranges: Vec<(Style, &str)> = highlighter.highlight_line(line, &ps).unwrap();
+            let escaped = as_24_bit_terminal_escaped(&ranges[..], true);
+            print!("{}", escaped);
+        }
+        in_code_block = false; // Ensure the flag is reset
+        code.clear(); // Clear the code buffer
     }
 }
 

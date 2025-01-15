@@ -1,6 +1,5 @@
 use std::{
     fs::{self, File},
-    io::Write, 
     path::PathBuf
 };
 
@@ -9,7 +8,7 @@ use crate::{
     db::{
         project::{delete_project, get_projects, store_project},
         prompt::{get_prompts, store_prompt},
-        scroll::{delete_scroll, get_scrolls, store_scroll, store_scrolls}
+        scroll::{delete_scroll, get_scrolls, store_scroll}
     },
     services::{
         model::get_openai_response, 
@@ -122,7 +121,10 @@ impl Legatio {
                 println!(
                     " [{}]: {:?}",
                     idx,
-                    project.project_path.split('/').last().unwrap()
+                    project.project_path
+                        .split("/")
+                        .last()
+                        .unwrap()
                 );
             }
 
@@ -175,12 +177,14 @@ impl Legatio {
                 &self.current_project.as_ref().unwrap().project_id
             ).await.unwrap();
 
+            let proj_prompt = format!(
+                "  -[ {} : Unchained ]-",
+                &self.current_project.as_ref().unwrap()
+                .project_path.split("/").last().unwrap()
+            );
+
             if !prompts.is_empty() {
-                println!(
-                    "  -[ {} ]-",
-                    &self.current_project.as_ref().unwrap()
-                    .project_path.split("/").last().unwrap()
-                );
+                println!("{}", &proj_prompt);
                 usr_prompts(
                     pool,
                     &self.current_project.as_ref().unwrap().project_id
@@ -199,14 +203,19 @@ impl Legatio {
             match choice {
                 0 => {
                     if !prompts.is_empty() {
-                        let concat_prompts: Vec<String> = prompts
+                        let mut concat_prompts: Vec<String> = prompts
                             .iter()
                             .map(|p| format_prompt(p) )
                             .collect();
 
+                        concat_prompts.push(proj_prompt);
+
                         let sel_p: String = item_selector(concat_prompts.clone()).unwrap().unwrap();
                         let sel_idx = concat_prompts.iter().position(|p| *p == sel_p).unwrap();
-                        self.current_prompt = Some(prompts.get(sel_idx).unwrap().to_owned());
+                        self.current_prompt = match prompts.get(sel_idx) {
+                            Some(p) => Some(p.to_owned()),
+                            _ => None,
+                        };
                         return Ok(AppState::AskModel);
                     } else {
                         println!("Invalid input, try again.");
@@ -230,6 +239,7 @@ impl Legatio {
         pool: &SqlitePool,
     ) -> Result<AppState> {
         loop {
+            clear_screen();
             // Preparing scrolls 
             let scrolls = get_scrolls(
                 pool,
@@ -249,23 +259,14 @@ impl Legatio {
                 ).join("legatio.md")
             );
 
-            if !prompt.is_some() || !file_prompt.is_ok() {
-                let mut file = File::create(
+            if !file_prompt.is_ok() {
+                File::create(
                     &PathBuf::from(
                         &self.current_project.as_ref().unwrap().project_path
                     ).join("legatio.md")
                 ).expect("Could not create file!");
 
-                //IDK about this.
-                for (i,f) in scrolls.iter().enumerate() { 
-                    let scroll_name = format!(
-                        "Files:\n[{}] {:?}",
-                        i,
-                        f.scroll_path.split("/").last().unwrap()
-                    );
-                    file.write(&scroll_name.as_bytes()).unwrap();
-                }
-            } else {
+            } else if prompt.is_some() {
 
                 let prompts = get_prompts(
                     pool, 
@@ -283,10 +284,10 @@ impl Legatio {
             }
 
             // Menu
-            println!(" [{}] Ask the Model", 1);
-            println!(" [{}] Switch branch", 2);
-            println!(" [{}] Edit Scrolls", 3);
-            println!(" [{}] Switch project",4);
+            println!(" [1] Ask the Model");
+            println!(" [2] Switch branch");
+            println!(" [3] Edit Scrolls");
+            println!(" [4] Switch project");
 
             let choice = usr_ask(" [ Select Option ] ").unwrap();
             match choice  {
@@ -297,16 +298,12 @@ impl Legatio {
                         &self.current_project.as_ref().unwrap().project_id
                     ).await.unwrap();
 
+                    let mut pmp_chain = None;
                     if !prompts.is_empty() && prompt.is_some() {
-                        let prompt_chain = prompt_chain(
+                        pmp_chain = Some(prompt_chain(
                             &prompts,
                             prompt.unwrap()
-                        );
-
-                        for p in prompt_chain.iter() {
-                            sys_prompt.push_str(&p.content);
-                            sys_prompt.push_str(&p.content);
-                        }
+                        ));
                     }
 
                     let curr_prompt = fs::read_to_string(
@@ -317,6 +314,7 @@ impl Legatio {
 
                     let output = get_openai_response(
                         &sys_prompt,
+                        pmp_chain,
                         &curr_prompt
                     ).await.unwrap();
                     
@@ -356,6 +354,7 @@ impl Legatio {
         pool: &SqlitePool,
     ) -> Result<AppState> {
         loop {
+            clear_screen();
             let scrolls = get_scrolls(
                 pool,
                 &self.current_project.as_ref().unwrap().project_id
@@ -404,7 +403,6 @@ impl Legatio {
         }
     }
 
-
     // Utility Functions
     async fn scroll_append_ctrl(&self, pool: &SqlitePool, project: &Project) -> Result<Vec<Scroll>> {
         let selected_scrolls = select_files(Some(&project.project_path)).unwrap();
@@ -412,5 +410,5 @@ impl Legatio {
         store_scroll(pool, &scroll).await.unwrap();
         Ok(get_scrolls(pool, &project.project_id).await.unwrap())
     }
-
+    
 }

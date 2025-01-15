@@ -1,10 +1,13 @@
-use std::usize;
-use std::{borrow::Cow, env::args, io, path::PathBuf, thread::spawn};
+use std::{borrow::Cow, path::PathBuf, thread::spawn};
 
 use std::io::Result;
 use ignore::{DirEntry, WalkBuilder, WalkState};
-use nucleo_picker::{nucleo::Config, PickerOptions, Render};
-use nucleo_picker::{render::StrRenderer, Picker};
+use nucleo_picker::{
+    nucleo::Config,
+    PickerOptions,
+    Render,
+    render::StrRenderer
+};
 
 pub struct DirEntryRender;
 

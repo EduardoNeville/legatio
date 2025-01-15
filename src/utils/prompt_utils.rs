@@ -28,7 +28,7 @@ pub fn prompt_chain(prompts: &[Prompt], prompt: &Prompt) -> Vec<Prompt> {
 
 pub fn format_prompt(p: &Prompt)-> String {
     format!(
-        " |- Prompt: {} \n |- Output: {}",
+        " |- Prompt: {:?} \n |- Output: {:?}",
         if p.content.chars().count() < 40 {
             p.content.replace('\n', " ").to_string()
         } else {

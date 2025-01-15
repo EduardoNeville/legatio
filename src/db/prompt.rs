@@ -1,8 +1,6 @@
-use sqlx::{sqlite::SqlitePool, Row};
+use sqlx::sqlite::SqlitePool;
 use anyhow::{Ok, Result};
-use crate::utils::{
-    logger::{log_error, log_info}, structs::Prompt
-};
+use crate::utils::{logger::log_info, structs::Prompt};
 
 /// Stores a prompt into the database.
 pub async fn store_prompt(pool: &SqlitePool, prompt: &mut Prompt) -> Result<()> {

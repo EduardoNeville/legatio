@@ -4,9 +4,15 @@ use openai_api_rs::v1::common::GPT4_O_LATEST; // Select model as per your use ca
 use std::env;
 use anyhow::{Result, Context};
 
+use crate::utils::structs::Prompt;
+
 use super::ui::highlight;
 
-pub async fn get_openai_response(system_prompt: &str, user_input: &str) -> Result<String> {
+pub async fn get_openai_response(
+    system_prompt: &str,
+    messages: Option<Vec<Prompt>>,
+    user_input: &str
+) -> Result<String> {
     // Retrieve the OpenAI API key from the environment securely
     let api_key = env::var("OPENAI_API_KEY")
         .context("Missing OPENAI_API_KEY environment variable")?;
@@ -15,7 +21,6 @@ pub async fn get_openai_response(system_prompt: &str, user_input: &str) -> Resul
     let client = OpenAIClient::builder().with_api_key(api_key).build().unwrap();
 
     let mut msgs = vec![];
-
     if system_prompt != "" {
         msgs.push(
             ChatCompletionMessage {
@@ -26,6 +31,30 @@ pub async fn get_openai_response(system_prompt: &str, user_input: &str) -> Resul
                 tool_call_id: None,
             }
         );
+    }
+
+    if messages.is_some() {
+        for msg in messages.unwrap().iter() {
+            msgs.push(
+                ChatCompletionMessage {
+                    role: chat_completion::MessageRole::user,
+                    content: chat_completion::Content::Text(msg.content.to_owned()),
+                    name: None,
+                    tool_calls: None,
+                    tool_call_id: None,
+                }
+            );
+
+            msgs.push(
+                ChatCompletionMessage {
+                    role: chat_completion::MessageRole::assistant,
+                    content: chat_completion::Content::Text(msg.output.to_owned()),
+                    name: None,
+                    tool_calls: None,
+                    tool_call_id: None,
+                }
+            );
+        }
     }
 
     msgs.push(
@@ -48,5 +77,5 @@ pub async fn get_openai_response(system_prompt: &str, user_input: &str) -> Resul
     let answer = result.choices[0].message.content.clone().unwrap();
     highlight(&answer, "md");
 
-    return Ok(answer)
+    Ok(answer)
 }
