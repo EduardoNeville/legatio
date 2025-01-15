@@ -1,7 +1,8 @@
 use std::{
-    fs::{self, File},
+    fs::{self, File, OpenOptions},
     path::PathBuf
 };
+use std::io::prelude::*;
 
 use sqlx::{Result, SqlitePool};
 use crate::{
@@ -16,9 +17,7 @@ use crate::{
         ui::{clear_screen, usr_ask, usr_prompt_chain, usr_scrolls}
     },
     utils::{
-        file_utils::read_file, 
-        prompt_utils::{format_prompt, prompt_chain, system_prompt},
-        structs::{AppState, Project, Prompt, Scroll}
+        file_utils::read_file, logger::log_info, prompt_utils::{format_prompt, prompt_chain, system_prompt}, structs::{AppState, Project, Prompt, Scroll}
     }
 };
 
@@ -169,7 +168,6 @@ impl Legatio {
         pool: &SqlitePool,
     ) -> Result<AppState> {
         loop {
-            clear_screen();
 
             // Show prompts
             let prompts = get_prompts(
@@ -239,7 +237,6 @@ impl Legatio {
         pool: &SqlitePool,
     ) -> Result<AppState> {
         loop {
-            clear_screen();
             // Preparing scrolls 
             let scrolls = get_scrolls(
                 pool,
@@ -292,7 +289,7 @@ impl Legatio {
             let choice = usr_ask(" [ Select Option ] ").unwrap();
             match choice  {
                 1 => { 
-                    let mut sys_prompt = system_prompt(&scrolls);
+                    let sys_prompt = system_prompt(&scrolls);
                     let prompts = get_prompts(
                         pool, 
                         &self.current_project.as_ref().unwrap().project_id
@@ -318,6 +315,21 @@ impl Legatio {
                         &curr_prompt
                     ).await.unwrap();
                     
+                    let mut file = OpenOptions::new()
+                            .write(true)
+                            .append(true)
+                            .open(&PathBuf::from(
+                                &self.current_project
+                                .as_ref()
+                                .unwrap()
+                                .project_path)
+                            .join("legatio.md"))
+                            .unwrap();
+
+                    if let Err(e) = writeln!(file, "{}", output) {
+                        eprintln!("Couldn't write to file: {}", e);
+                    }
+                    
                     let prev_id = match &self.current_prompt.as_ref() {
                         Some(p) => &p.prompt_id,
                         _ => &self.current_project.as_ref().unwrap().project_id,
@@ -330,6 +342,7 @@ impl Legatio {
                         &prev_id,
                     );
                     store_prompt(pool, &mut lst_prompt).await.unwrap();
+                    log_info(&format!("Prompt {} stored!", lst_prompt.prompt_id));
 
                     self.current_prompt = Some(lst_prompt);
                 }, 
