@@ -77,13 +77,14 @@ pub fn highlight(s: &str, extension: &str) {
 
 pub async fn usr_scrolls(pool: &SqlitePool, project: &Project) -> Result<()> {
     let scrolls = get_scrolls(pool, &project.project_id).await.unwrap();
-    println!("Current scrolls: \n");
-    for (idx, row) in scrolls.iter().enumerate() {
-        let scrollname = row.scroll_path.split("/").last().unwrap();
-        println!(" [{}]: {} \n", idx, scrollname);
-        //highlight(&row.content.get(0..50).unwrap(), scrollname.split(".").last().unwrap()); 
+    if !scrolls.is_empty() {
+        println!(" [ Your Scrolls ] ");
+        for (idx, row) in scrolls.iter().enumerate() {
+            let scrollname = row.scroll_path.split("/").last().unwrap();
+            println!(" [{}]: {} \n", idx, scrollname);
+            //highlight(&row.content.get(0..50).unwrap(), scrollname.split(".").last().unwrap()); 
+        }
     }
-
     Ok(())
 }
 

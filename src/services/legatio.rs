@@ -82,7 +82,7 @@ impl Legatio {
 
         loop {
             clear_screen();
-            println!("Options:\n[1]: Create a new project\n[2]: Exit");
+            println!(" [1]: Create a new project\n [2]: Exit");
 
             let choice = usr_ask("Enter your choice: ").unwrap();
 
@@ -116,7 +116,7 @@ impl Legatio {
         loop {
             clear_screen();
             let projects = get_projects(pool).await.unwrap();
-            println!("Edit Project:");
+            println!(" [ Project Selection ] ");
 
             for (idx, project) in projects.iter().enumerate() {
                 println!(
@@ -131,7 +131,7 @@ impl Legatio {
             println!(" [{}]: Delete Current Project", projects_len + 1);
             println!(" [{}]: Exit", projects_len + 2);
 
-            let choice = usr_ask("Enter your choice: ").unwrap();
+            let choice = usr_ask(" [ Select Option ]").unwrap();
 
             if choice < projects_len {
                 self.current_project = Some(projects[choice].clone());
@@ -176,7 +176,11 @@ impl Legatio {
             ).await.unwrap();
 
             if !prompts.is_empty() {
-                println!("Select a prompt branch: ");
+                println!(
+                    "  -[ {} ]-",
+                    &self.current_project.as_ref().unwrap()
+                    .project_path.split("/").last().unwrap()
+                );
                 usr_prompts(
                     pool,
                     &self.current_project.as_ref().unwrap().project_id
@@ -191,7 +195,7 @@ impl Legatio {
             println!(" [1]: Delete Prompt");
             println!(" [2]: Select Project");
 
-            let choice: usize = usr_ask("Enter your choice: " ).unwrap();
+            let choice: usize = usr_ask(" [ Select Option ] ").unwrap();
             match choice {
                 0 => {
                     if !prompts.is_empty() {
@@ -273,18 +277,18 @@ impl Legatio {
                     &self.current_prompt.as_ref().unwrap()
                 );
 
+                println!(" [ Prompt Chain ]");
                 usr_prompt_chain(&pmp_chain);
 
             }
 
             // Menu
-            println!("Select an option:");
-            println!("[{}] Ask the Model", 1);
-            println!("[{}] Switch branch", 2);
-            println!("[{}] Edit Scrolls", 3);
-            println!("[{}] Switch project",4);
+            println!(" [{}] Ask the Model", 1);
+            println!(" [{}] Switch branch", 2);
+            println!(" [{}] Edit Scrolls", 3);
+            println!(" [{}] Switch project",4);
 
-            let choice = usr_ask("Enter your choice: \n").unwrap();
+            let choice = usr_ask(" [ Select Option ] ").unwrap();
             match choice  {
                 1 => { 
                     let mut sys_prompt = system_prompt(&scrolls);
@@ -371,7 +375,7 @@ impl Legatio {
                 scrolls.len() + 3,
             );
 
-            let choice = usr_ask("Enter your choice: ").unwrap();
+            let choice = usr_ask(" [ Select Option ]").unwrap();
 
             if choice < scrolls.len() {
                 println!("Selected scroll: {}", scrolls[choice].scroll_path);
