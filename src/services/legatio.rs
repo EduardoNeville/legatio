@@ -39,7 +39,6 @@ impl Legatio {
     }
 
     pub async fn run(&mut self, pool: &SqlitePool) -> Result<()> {
-
         // Fetch projects for initialization
         let projects = get_projects(pool).await.unwrap();
         if !projects.is_empty() {
@@ -262,7 +261,6 @@ impl Legatio {
                         &self.current_project.as_ref().unwrap().project_path
                     ).join("legatio.md")
                 ).expect("Could not create file!");
-
             } else if prompt.is_some() {
 
                 let prompts = get_prompts(
@@ -325,14 +323,14 @@ impl Legatio {
                                 .project_path)
                             .join("legatio.md"))
                             .unwrap();
-
-                    if let Err(e) = writeln!(file, "{}", output) {
+                    let out_md = format!("0o0o0o0o0 \n Answer: \n{}", output);
+                    if let Err(e) = writeln!(file, "{}", out_md) {
                         eprintln!("Couldn't write to file: {}", e);
                     }
                     
                     let prev_id = match &self.current_prompt.as_ref() {
                         Some(p) => &p.prompt_id,
-                        _ => &self.current_project.as_ref().unwrap().project_id,
+                        None => &self.current_project.as_ref().unwrap().project_id,
                     };
 
                     let mut lst_prompt = Prompt::new(
@@ -342,7 +340,6 @@ impl Legatio {
                         &prev_id,
                     );
                     store_prompt(pool, &mut lst_prompt).await.unwrap();
-                    log_info(&format!("Prompt {} stored!", lst_prompt.prompt_id));
 
                     self.current_prompt = Some(lst_prompt);
                 }, 

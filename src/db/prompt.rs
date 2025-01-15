@@ -9,8 +9,7 @@ pub async fn store_prompt(pool: &SqlitePool, prompt: &mut Prompt) -> Result<()> 
     // Use RETURNING clause (if supported by SQLite) to fetch the `prompt_id`.
     let _ = sqlx::query(
         "INSERT INTO prompts (prompt_id, project_id, prev_prompt_id, content, output) 
-         VALUES ($1, $2, $3, $4, $5)
-         RETURNING idx"
+         VALUES ($1, $2, $3, $4, $5)"
     )
     .bind(&prompt.prompt_id)
     .bind(&prompt.project_id)
