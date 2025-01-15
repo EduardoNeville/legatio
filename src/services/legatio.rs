@@ -182,14 +182,14 @@ impl Legatio {
                     &self.current_project.as_ref().unwrap().project_id
                 ).await.unwrap();
 
-                println!("[0]: Select Prompt");
+                println!(" [0]: Select Prompt");
 
             } else {
                 println!("This project has no prompts!");
                 return Ok(AppState::AskModel)
             }
-            println!("[1]: Delete Prompt");
-            println!("[2]: Select Project");
+            println!(" [1]: Delete Prompt");
+            println!(" [2]: Select Project");
 
             let choice: usize = usr_ask("Enter your choice: " ).unwrap();
             match choice {
@@ -238,14 +238,14 @@ impl Legatio {
             ).await.unwrap();
 
             // Preparing prompts
-            let prompt = &self.current_prompt;
-            let curr_prompt = fs::read_to_string(
+            let prompt = self.current_prompt.as_ref();
+            let file_prompt = fs::read_to_string(
                 &PathBuf::from(
                     &self.current_project.as_ref().unwrap().project_path
                 ).join("legatio.md")
             );
 
-            if !prompt.is_some() || !curr_prompt.is_ok() {
+            if !prompt.is_some() || !file_prompt.is_ok() {
                 let mut file = File::create(
                     &PathBuf::from(
                         &self.current_project.as_ref().unwrap().project_path
@@ -273,10 +273,9 @@ impl Legatio {
                     &self.current_prompt.as_ref().unwrap()
                 );
 
-                let _ = usr_prompt_chain(&pmp_chain);
+                usr_prompt_chain(&pmp_chain);
 
             }
-
 
             // Menu
             println!("Select an option:");
@@ -288,23 +287,22 @@ impl Legatio {
             let choice = usr_ask("Enter your choice: \n").unwrap();
             match choice  {
                 1 => { 
-                    let sys_prompt = system_prompt(&scrolls);
+                    let mut sys_prompt = system_prompt(&scrolls);
                     let prompts = get_prompts(
                         pool, 
                         &self.current_project.as_ref().unwrap().project_id
                     ).await.unwrap();
 
-                    let mut user_input = String::from("");
-                    if self.current_prompt.is_some() {
+                    if !prompts.is_empty() && prompt.is_some() {
                         let prompt_chain = prompt_chain(
                             &prompts,
-                            &self.current_prompt.as_ref().unwrap()
+                            prompt.unwrap()
                         );
 
-                        let _ = prompt_chain.iter().map(|p| {
-                            user_input.push_str(&p.content);
-                            user_input.push_str(&p.output);
-                        });
+                        for p in prompt_chain.iter() {
+                            sys_prompt.push_str(&p.content);
+                            sys_prompt.push_str(&p.content);
+                        }
                     }
 
                     let curr_prompt = fs::read_to_string(
@@ -313,15 +311,13 @@ impl Legatio {
                         ).join("legatio.md")
                     ).unwrap();
 
-                    user_input.push_str(&curr_prompt);
-
                     let output = get_openai_response(
                         &sys_prompt,
-                        &user_input
+                        &curr_prompt
                     ).await.unwrap();
                     
                     let prev_id = match &self.current_prompt.as_ref() {
-                        Some(p) => &p.prev_prompt_id,
+                        Some(p) => &p.prompt_id,
                         _ => &self.current_project.as_ref().unwrap().project_id,
                     };
 

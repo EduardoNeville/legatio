@@ -28,32 +28,32 @@ pub fn prompt_chain(prompts: &[Prompt], prompt: &Prompt) -> Vec<Prompt> {
 
 pub fn format_prompt(p: &Prompt)-> String {
     format!(
-        " |- Content: {} \n | Output: {}...",
+        " |- Content: {} \n |  Output: {}",
         if p.content.chars().count() < 40 {
-            &p.content
+            p.content.replace('\n', " ").to_string()
         } else {
-            &p.content[0..20]
+            p.content[0..40].replace('\n', " ").to_string()
         },
         if p.output.chars().count() < 40 {
-            &p.output
+            p.output.replace('\n', " ").to_string()
         } else {
-            &p.output[0..20]
+            p.output[0..40].replace('\n', " ").to_string()
         }
     )
 }
 
-pub fn format_prompt_depth(prompt: &Prompt, b_depth: &str)-> String {
+pub fn format_prompt_depth(p: &Prompt, b_depth: &str)-> String {
     format!(
-        "{b_depth}- Content: {:?}... \n{b_depth}  Output: {:?}...",
-        if prompt.content.chars().count() < 20 {
-            &prompt.content
+        "{b_depth}> Content: {:?} \n{b_depth}> Output: {:?}",
+        if p.content.chars().count() < 40 {
+            p.content.replace('\n', " ").to_string()
         } else {
-            &prompt.content[0..20]
+            p.content[0..40].replace('\n', " ").to_string()
         },
-        if prompt.output.chars().count() < 20 {
-            &prompt.output
+        if p.output.chars().count() < 40 {
+            p.output.replace('\n', " ").to_string()
         } else {
-            &prompt.output[0..20]
-        },
+            p.output[0..40].replace('\n', " ").to_string()
+        }
     )
 }

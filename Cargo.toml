@@ -35,12 +35,6 @@ anyhow = "1.0"
 log = "0.4"
 env_logger = "0.10"
 
-# For calling external commands
-async-process = "1.4"
-
-# For managing paths
-path-absolutize = "3.0"
-
 # Search
 ignore = "0.4.23"
 nucleo-picker = "0.8.0"
@@ -59,5 +53,4 @@ crossterm = "0.28.1"
 
 # Syntax
 syntect = "5.2"
-chrono = "0.4.39"
 pulldown-cmark = "0.12.2"

@@ -87,19 +87,22 @@ pub async fn usr_scrolls(pool: &SqlitePool, project: &Project) -> Result<()> {
     Ok(())
 }
 
-async fn helper_print(prompts: &Vec<Prompt>, prompt: &Prompt, depth: &usize)-> Result<()> {
-    let child_prompts: Vec<&Prompt> = prompts.iter().filter(
-        |p| &p.prev_prompt_id == &prompt.prompt_id
-    ).collect();
-    
-    let b_depth = "  |";
-    let _ = b_depth.repeat(*depth);
-    println!("{b_depth}");
-    println!("{}", format_prompt_depth(prompt, b_depth));
+fn helper_print(prompts: &Vec<Prompt>, prompt: &Prompt, b_depth: &str) -> Result<()> {
+    println!("{}", b_depth);
+    println!("{}", format_prompt_depth(prompt, b_depth));  // Print the prompt using the current indentation
 
-    let new_depth = depth + 1;
-    if child_prompts.len() != 0 {
-        let _ = child_prompts.iter().map(|p| helper_print(prompts, &p, &new_depth));
+    let new_indent = format!("{}  |", b_depth);  // Append to the current indentation for children
+    let child_prompts: Vec<&Prompt> = prompts
+        .iter()
+        .filter(|p| &p.prev_prompt_id == &prompt.prompt_id)
+        .collect();
+
+    for p in child_prompts.iter() {
+        helper_print(
+            prompts,
+            p,
+            &new_indent
+        ).expect(&format!("Error parsing prompt: {:?}", p.prompt_id));
     }
 
     Ok(())
@@ -108,13 +111,12 @@ async fn helper_print(prompts: &Vec<Prompt>, prompt: &Prompt, depth: &usize)-> R
 pub async fn usr_prompts(pool: &SqlitePool, project_id: &str) -> Result<()> {
     let prompts = get_prompts(pool, &project_id).await.unwrap();
 
-    let depth = 0;
     let fst_prompts: Vec<&Prompt> = prompts.iter().filter(
         |p| &p.prev_prompt_id == &project_id
     ).collect();
-    
+
     for fst_prompt in fst_prompts.iter() {
-        helper_print(&prompts, fst_prompt, &depth).await.unwrap();
+        helper_print(&prompts, fst_prompt, "  |").expect(&format!("Error parsing prompt: {:?}", fst_prompt.prompt_id));
     }
 
     Ok(())
@@ -126,11 +128,9 @@ pub fn clear_screen() {
     io::stdout().flush().unwrap();
 }
 
-pub fn usr_prompt_chain(prompts: &[Prompt]) -> Result<()> {
-    let _ = prompts.iter().map(|p| {
+pub fn usr_prompt_chain(prompts: &[Prompt]) {
+    for p in prompts.iter() {
         println!("{}", format_prompt(p));
-    });
-
-    Ok(())
+    };
 }
 
