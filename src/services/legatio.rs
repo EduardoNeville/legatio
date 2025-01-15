@@ -18,7 +18,7 @@ use crate::{
     },
     utils::{
         file_utils::read_file, 
-        prompt_utils::{prompt_chain, system_prompt},
+        prompt_utils::{format_prompt, prompt_chain, system_prompt},
         structs::{AppState, Project, Prompt, Scroll}
     }
 };
@@ -175,7 +175,6 @@ impl Legatio {
                 &self.current_project.as_ref().unwrap().project_id
             ).await.unwrap();
 
-            let sel_prompt: Option<Prompt> = None;
             if !prompts.is_empty() {
                 println!("Select a prompt branch: ");
                 usr_prompts(
@@ -196,22 +195,10 @@ impl Legatio {
             match choice {
                 0 => {
                     if !prompts.is_empty() {
-                        let concat_prompts: Vec<String> = prompts.iter().enumerate().map(|(i, p)| {
-                            format!(
-                                "[{}] Content: {}... Output: {}...",
-                                i,
-                                if p.content.chars().count() < 20 {
-                                    &p.content
-                                } else {
-                                    &p.content[0..20]
-                                },
-                                if p.output.chars().count() < 20 {
-                                    &p.output
-                                } else {
-                                    &p.output[0..20]
-                                }
-                            )
-                        }).collect();
+                        let concat_prompts: Vec<String> = prompts
+                            .iter()
+                            .map(|p| format_prompt(p) )
+                            .collect();
 
                         let sel_p: String = item_selector(concat_prompts.clone()).unwrap().unwrap();
                         let sel_idx = concat_prompts.iter().position(|p| *p == sel_p).unwrap();

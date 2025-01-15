@@ -60,3 +60,4 @@ crossterm = "0.28.1"
 # Syntax
 syntect = "5.2"
 chrono = "0.4.39"
+pulldown-cmark = "0.12.2"

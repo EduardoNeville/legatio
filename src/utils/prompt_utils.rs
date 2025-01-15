@@ -26,4 +26,34 @@ pub fn prompt_chain(prompts: &[Prompt], prompt: &Prompt) -> Vec<Prompt> {
     return chain
 } 
 
+pub fn format_prompt(p: &Prompt)-> String {
+    format!(
+        " |- Content: {} \n | Output: {}...",
+        if p.content.chars().count() < 40 {
+            &p.content
+        } else {
+            &p.content[0..20]
+        },
+        if p.output.chars().count() < 40 {
+            &p.output
+        } else {
+            &p.output[0..20]
+        }
+    )
+}
 
+pub fn format_prompt_depth(prompt: &Prompt, b_depth: &str)-> String {
+    format!(
+        "{b_depth}- Content: {:?}... \n{b_depth}  Output: {:?}...",
+        if prompt.content.chars().count() < 20 {
+            &prompt.content
+        } else {
+            &prompt.content[0..20]
+        },
+        if prompt.output.chars().count() < 20 {
+            &prompt.output
+        } else {
+            &prompt.output[0..20]
+        },
+    )
+}

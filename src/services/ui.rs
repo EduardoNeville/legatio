@@ -2,6 +2,7 @@ use std::io;
 use std::io::Write;
 use anyhow::{Ok, Result};
 
+use pulldown_cmark::{CodeBlockKind, Event, Parser, Tag, TagEnd};
 use sqlx::SqlitePool;
 use syntect::easy::HighlightLines;
 use syntect::parsing::SyntaxSet;
@@ -10,6 +11,7 @@ use syntect::util::{as_24_bit_terminal_escaped, LinesWithEndings};
 
 use crate::db::scroll::get_scrolls;
 use crate::db::prompt::get_prompts;
+use crate::utils::prompt_utils::{format_prompt, format_prompt_depth};
 use crate::utils::structs::{ Project, Prompt };
 
 pub fn usr_ask(sel: &str)-> Result<usize> {
@@ -27,14 +29,49 @@ pub fn highlight(s: &str, extension: &str) {
     // Load these once at the start of your program
     let ps = SyntaxSet::load_defaults_newlines();
     let ts = ThemeSet::load_defaults();
+    let theme = ts.themes["base16-ocean.dark"].clone();
 
-    let syntax = ps.find_syntax_by_extension(&extension).unwrap();
-    let mut h = HighlightLines::new(syntax, &ts.themes["base16-ocean.dark"]);
+    let parser = Parser::new(s);
 
-    for line in LinesWithEndings::from(s) { // LinesWithEndings enables use of newlines mode
-        let ranges: Vec<(Style, &str)> = h.highlight_line(line, &ps).unwrap();
-        let escaped = as_24_bit_terminal_escaped(&ranges[..], true);
-        println!("{}", escaped);
+    let mut syntax = ps.find_syntax_by_extension(extension).unwrap();
+    let mut code = String::new();
+    let mut in_code_block = false;
+
+    for event in parser {
+        match event {
+            Event::Start(Tag::CodeBlock(CodeBlockKind::Fenced(lang))) => {
+                let lang = lang.trim();
+                syntax = ps
+                    .find_syntax_by_token(lang)
+                    .unwrap_or_else(|| ps.find_syntax_plain_text());
+                in_code_block = true;
+            }
+            Event::End(TagEnd::CodeBlock) => {
+                if in_code_block {
+                    let mut highlighter = HighlightLines::new(&syntax, &theme);
+                    for line in LinesWithEndings::from(&code) {
+                        let ranges: Vec<(Style, &str)> = highlighter.highlight_line(line, &ps).unwrap();
+                        let escaped = as_24_bit_terminal_escaped(&ranges[..], true);
+                        print!("{}", escaped);
+                    }
+                    code.clear();
+                    in_code_block = false;
+                }
+            }
+            Event::Text(text) => {
+                if in_code_block {
+                    code.push_str(&text);
+                } else {
+                    let mut highlighter = HighlightLines::new(&syntax, &theme);
+                    for line in LinesWithEndings::from(&text) {
+                        let ranges: Vec<(Style, &str)> = highlighter.highlight_line(line, &ps).unwrap();
+                        let escaped = as_24_bit_terminal_escaped(&ranges[..], true);
+                        print!("{}", escaped);
+                    }
+                }
+            }
+            _ => {}
+        }
     }
 }
 
@@ -58,23 +95,7 @@ async fn helper_print(prompts: &Vec<Prompt>, prompt: &Prompt, depth: &usize)-> R
     let b_depth = "  |";
     let _ = b_depth.repeat(*depth);
     println!("{b_depth}");
-
-    let p_c: &str = if prompt.content.chars().count() < 20 {
-        &prompt.content
-    } else {
-        &prompt.content[0..20]
-    };
-
-    let p_o: &str = if prompt.output.chars().count() < 20 {
-        &prompt.output
-    } else {
-        &prompt.output[0..20]
-    };
-    println!(
-        "{b_depth}- Content: {:?}... \n{b_depth}  Output: {:?}...",
-        p_c,
-        p_o
-    );
+    println!("{}", format_prompt_depth(prompt, b_depth));
 
     let new_depth = depth + 1;
     if child_prompts.len() != 0 {
@@ -107,23 +128,7 @@ pub fn clear_screen() {
 
 pub fn usr_prompt_chain(prompts: &[Prompt]) -> Result<()> {
     let _ = prompts.iter().map(|p| {
-
-        let p_c: &str = if p.content.chars().count() < 20 {
-            &p.content
-        } else {
-            &p.content[0..20]
-        };
-
-        let p_o: &str = if p.output.chars().count() < 20 {
-            &p.output
-        } else {
-            &p.output[0..20]
-        };
-        println!(
-            " |- Content: {:?} \n |   Output: {:?}",
-            p_c,
-            p_o
-        );
+        println!("{}", format_prompt(p));
     });
 
     Ok(())
