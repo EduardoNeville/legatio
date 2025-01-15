@@ -33,7 +33,7 @@ pub struct Scroll {
 }
 
 impl Scroll {
-    pub fn new(path: &String, content: &String, project_id: &String) -> Scroll {
+    pub fn new(path: &str, content: &str, project_id: &str) -> Scroll {
         Scroll {
             scroll_id: Uuid::new_v4().to_string(),
             scroll_path: path.to_string(),

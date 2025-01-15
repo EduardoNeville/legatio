@@ -1,5 +1,4 @@
 use std::fs;
-use rayon::prelude::*;
 use anyhow::Result;
 use crate::utils::structs::Scroll;
 use std::path::PathBuf;
@@ -63,11 +62,7 @@ pub fn get_contents(
 }
 
 
-pub fn read_files(file_paths: &[String], project_id: &String) -> Result<Vec<Scroll>> {
-    file_paths.par_iter()
-        .map(|path| {
-            let content = fs::read_to_string(path)?;
-            Ok(Scroll::new(&path, &content, &project_id))
-        })
-        .collect()
+pub fn read_file(file_path: &str, project_id: &str) -> Result<Scroll> {
+    let content = fs::read_to_string(file_path)?;
+    Ok(Scroll::new(file_path, &content, project_id))
 }

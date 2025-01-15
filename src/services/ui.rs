@@ -28,8 +28,6 @@ pub fn highlight(s: &str, extension: &str) {
     let ps = SyntaxSet::load_defaults_newlines();
     let ts = ThemeSet::load_defaults();
 
-    println!("extension: {}", &extension);
-
     let syntax = ps.find_syntax_by_extension(&extension).unwrap();
     let mut h = HighlightLines::new(syntax, &ts.themes["base16-ocean.dark"]);
 
@@ -60,10 +58,22 @@ async fn helper_print(prompts: &Vec<Prompt>, prompt: &Prompt, depth: &usize)-> R
     let b_depth = "  |";
     let _ = b_depth.repeat(*depth);
     println!("{b_depth}");
+
+    let p_c: &str = if prompt.content.chars().count() < 20 {
+        &prompt.content
+    } else {
+        &prompt.content[0..20]
+    };
+
+    let p_o: &str = if prompt.output.chars().count() < 20 {
+        &prompt.output
+    } else {
+        &prompt.output[0..20]
+    };
     println!(
-        "{b_depth}- Content: {:?} \n{b_depth}  Output: {:?}",
-        prompt.content.get(0..50).unwrap(),
-        prompt.output.get(0..50).unwrap()
+        "{b_depth}- Content: {:?}... \n{b_depth}  Output: {:?}...",
+        p_c,
+        p_o
     );
 
     let new_depth = depth + 1;
@@ -97,12 +107,25 @@ pub fn clear_screen() {
 
 pub fn usr_prompt_chain(prompts: &[Prompt]) -> Result<()> {
     let _ = prompts.iter().map(|p| {
+
+        let p_c: &str = if p.content.chars().count() < 20 {
+            &p.content
+        } else {
+            &p.content[0..20]
+        };
+
+        let p_o: &str = if p.output.chars().count() < 20 {
+            &p.output
+        } else {
+            &p.output[0..20]
+        };
         println!(
             " |- Content: {:?} \n |   Output: {:?}",
-            p.content.get(0..50).unwrap(),
-            p.output.get(0..50).unwrap()
+            p_c,
+            p_o
         );
     });
 
     Ok(())
 }
+

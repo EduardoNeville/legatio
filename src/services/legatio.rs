@@ -9,15 +9,15 @@ use crate::{
     db::{
         project::{delete_project, get_projects, store_project},
         prompt::{get_prompts, store_prompt},
-        scroll::{delete_scroll, get_scrolls, store_scrolls}
+        scroll::{delete_scroll, get_scrolls, store_scroll, store_scrolls}
     },
     services::{
         model::get_openai_response, 
-        search::select_files, 
+        search::{item_selector, select_files}, 
         ui::{clear_screen, usr_ask, usr_prompt_chain, usr_scrolls}
     },
     utils::{
-        file_utils::{get_contents, read_files}, 
+        file_utils::read_file, 
         prompt_utils::{prompt_chain, system_prompt},
         structs::{AppState, Project, Prompt, Scroll}
     }
@@ -41,7 +41,6 @@ impl Legatio {
     }
 
     pub async fn run(&mut self, pool: &SqlitePool) -> Result<()> {
-        let project_base_path = String::from("/home/eduardoneville/Desktop/");
 
         // Fetch projects for initialization
         let projects = get_projects(pool).await.unwrap();
@@ -57,7 +56,6 @@ impl Legatio {
                     // Handle creating a new project
                     self.state = self.handle_new_project(
                         pool,
-                        &project_base_path
                     ).await.unwrap();
                 }
                 AppState::SelectProject => {
@@ -79,7 +77,6 @@ impl Legatio {
     async fn handle_new_project(
         &mut self,
         pool: &SqlitePool,
-        base_path: &str,
     ) -> Result<AppState> {
         println!("Welcome! You do not have a project yet.");
 
@@ -93,11 +90,9 @@ impl Legatio {
                 1 => {
                     // Logic to create a new project
                     println!("Creating a new project...");
-                    let dir_list = get_contents(base_path, true, 20)
-                        .expect("Failed to fetch directory");
-                    let selected_dir = select_files(dir_list, false)
+                    let selected_dir = select_files(None)
                         .expect("Failed to select directory");
-                    let project = Project::new(&selected_dir[0]);
+                    let project = Project::new(&selected_dir);
                     store_project(pool, &project).await.unwrap();
                     println!("Project '{}' created.", project.project_path);
                     self.current_project = Some(project.clone());
@@ -181,21 +176,12 @@ impl Legatio {
             ).await.unwrap();
 
             let sel_prompt: Option<Prompt> = None;
-            let mut concat_prompts: Vec<String> = vec![];
             if !prompts.is_empty() {
                 println!("Select a prompt branch: ");
                 usr_prompts(
                     pool,
                     &self.current_project.as_ref().unwrap().project_id
                 ).await.unwrap();
-                let _ = prompts.iter().enumerate().map(|(i,p)| {
-                    concat_prompts.push(format!(
-                        "[{:?}] Content: {:?} Output: {:?}",
-                        &i,
-                        &p.content.get(0..30).unwrap(),
-                        &p.output.get(0..30).unwrap(),
-                    ));
-                });
 
                 println!("[0]: Select Prompt");
 
@@ -210,14 +196,30 @@ impl Legatio {
             match choice {
                 0 => {
                     if !prompts.is_empty() {
-                        let sel_idx: usize = select_files(concat_prompts, false).unwrap();
-                        self.current_prompt = Some(prompts.get(sel_idx));
+                        let concat_prompts: Vec<String> = prompts.iter().enumerate().map(|(i, p)| {
+                            format!(
+                                "[{}] Content: {}... Output: {}...",
+                                i,
+                                if p.content.chars().count() < 20 {
+                                    &p.content
+                                } else {
+                                    &p.content[0..20]
+                                },
+                                if p.output.chars().count() < 20 {
+                                    &p.output
+                                } else {
+                                    &p.output[0..20]
+                                }
+                            )
+                        }).collect();
+
+                        let sel_p: String = item_selector(concat_prompts.clone()).unwrap().unwrap();
+                        let sel_idx = concat_prompts.iter().position(|p| *p == sel_p).unwrap();
+                        self.current_prompt = Some(prompts.get(sel_idx).unwrap().to_owned());
                         return Ok(AppState::AskModel);
                     } else {
                         println!("Invalid input, try again.");
-
                     }
-
                 },
                 1 => {
                     todo!("Delete prompt");
@@ -256,7 +258,7 @@ impl Legatio {
                 ).join("legatio.md")
             );
 
-            if !prompt.is_some() && !curr_prompt.is_ok() {
+            if !prompt.is_some() || !curr_prompt.is_ok() {
                 let mut file = File::create(
                     &PathBuf::from(
                         &self.current_project.as_ref().unwrap().project_path
@@ -418,10 +420,9 @@ impl Legatio {
 
     // Utility Functions
     async fn scroll_append_ctrl(&self, pool: &SqlitePool, project: &Project) -> Result<Vec<Scroll>> {
-        let scrolls_in_dir = get_contents(&project.project_path, false, 20).unwrap();
-        let selected_scrolls = select_files(scrolls_in_dir, true).unwrap();
-        let scrolls = read_files(&selected_scrolls, &project.project_id).unwrap();
-        store_scrolls(pool, &scrolls).await.unwrap();
+        let selected_scrolls = select_files(Some(&project.project_path)).unwrap();
+        let scroll = read_file(&selected_scrolls, &project.project_id).unwrap();
+        store_scroll(pool, &scroll).await.unwrap();
         Ok(get_scrolls(pool, &project.project_id).await.unwrap())
     }
 

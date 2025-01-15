@@ -11,7 +11,6 @@ use anyhow::Result;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    
     // Initialisers
     dotenv().ok();
     env_logger::init();

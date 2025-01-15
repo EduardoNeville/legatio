@@ -41,11 +41,9 @@ async-process = "1.4"
 # For managing paths
 path-absolutize = "3.0"
 
-# Fzf alternative
-nucleo = "0.5.0"
-
-# Walk dir
-rayon = "1.5"
+# Search
+ignore = "0.4.23"
+nucleo-picker = "0.8.0"
 
 # uuid
 uuid = { version = "1.11.0", features = ["v4"] }

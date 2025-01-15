@@ -1,5 +1,5 @@
 use sqlx::{sqlite::SqlitePool, Row};
-use anyhow::Result;
+use anyhow::{Ok, Result};
 use crate::utils::{
     logger::{log_error, log_info}, structs::Prompt
 };
@@ -9,7 +9,7 @@ pub async fn store_prompt(pool: &SqlitePool, prompt: &mut Prompt) -> Result<()> 
     log_info("Storing prompt in the database");
 
     // Use RETURNING clause (if supported by SQLite) to fetch the `prompt_id`.
-    let row = sqlx::query(
+    let _ = sqlx::query(
         "INSERT INTO prompts (prompt_id, project_id, prev_prompt_id, content, output) 
          VALUES ($1, $2, $3, $4, $5)
          RETURNING idx"
@@ -22,17 +22,7 @@ pub async fn store_prompt(pool: &SqlitePool, prompt: &mut Prompt) -> Result<()> 
     .fetch_one(pool)
     .await;
 
-    match row {
-        Ok(returned_row) => {
-            // Extract the newly inserted `prompt_id`
-            prompt.idx = Some(returned_row.get(0));
-            Ok(())
-        }
-        Err(error) => {
-            log_error(&format!("Failed to insert prompt: {}", error));
-            Err(error.into())
-        }
-    }
+    Ok(())
 }
 
 // Sorted from first to last prompt on the list
