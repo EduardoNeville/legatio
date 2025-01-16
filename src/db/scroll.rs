@@ -1,6 +1,7 @@
 use sqlx::sqlite::SqlitePool;
 use futures::future;
 use anyhow::Result;
+use crate::utils::db_utils::delete_module;
 use crate::utils::structs::Scroll;
 use crate::utils::logger::{log_info, log_error};
 
@@ -64,18 +65,11 @@ pub async fn get_scrolls(pool: &SqlitePool, project_id: &str)-> Result<Vec<Scrol
     Ok(scrolls_result)
 }
 
-pub async fn delete_scroll(pool: &SqlitePool, scroll: &Scroll) -> Result<()> {
-    log_info(&format!("Deleting scroll: {}", &scroll.scroll_id));
+pub async fn delete_scroll(pool: &SqlitePool, scroll_id: &str) -> Result<()> {
 
-    if let Err(error) =  sqlx::query("DELETE FROM scrolls WHERE scroll_id=$1")
-        .bind(&scroll.scroll_id)
-        .execute(pool)
+    delete_module(pool, &"scrolls", &"scroll_id", scroll_id)
         .await
-    {
-        log_error(&format!("Unable to DELETE scroll: {}", scroll.scroll_id));
-        return Err(error.into());
-    }
-    
-    log_info("Successfully deleted scroll");
+        .expect("Error in scroll deletion");
+
     Ok(())
 }

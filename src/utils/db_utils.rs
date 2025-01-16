@@ -1,5 +1,6 @@
 use sqlx::{migrate::MigrateDatabase, sqlite::SqlitePool, Sqlite};
 use anyhow::Result;
+use crate::utils::logger::{log_info, log_error};
 
 pub async fn get_db_pool(db_url: &str) -> Result<SqlitePool> {
     if !Sqlite::database_exists(db_url).await.unwrap_or(false) {
@@ -31,3 +32,31 @@ pub async fn get_db_pool(db_url: &str) -> Result<SqlitePool> {
     Ok(db)
 }
 
+pub async fn delete_module(
+    pool: &SqlitePool,
+    table: &str,
+    column_name: &str,
+    column_value: &str,
+) -> Result<()> {
+    // Construct the query dynamically
+    let query = format!("DELETE FROM {} WHERE {} = ?", table, column_name);
+
+    // Execute the query with the given value as a parameter
+    if let Err(error) = sqlx::query(&query)
+        .bind(column_value)
+        .execute(pool)
+        .await
+    {
+        log_error(&format!(
+            "FAILED :: DELETE from {} where {} = {}",
+            table, column_name, column_value
+        ));
+        return Err(error.into());
+    }
+
+    log_info(&format!(
+        "SUCCESSFUL :: DELETE from {} where {} = {}",
+        table, column_name, column_value
+    ));
+    Ok(())
+}

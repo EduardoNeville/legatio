@@ -421,10 +421,9 @@ impl Legatio {
                 ).await.unwrap();
             } else if choice == scrolls.len() + 1 {
                 // Remove scroll
-                let scroll_idx = usr_ask("Select scroll index to remove: ").unwrap();
+                let scroll_idx = usr_ask("Select scroll index delete: ").unwrap();
                 if scroll_idx < scrolls.len() {
-                    delete_scroll(pool, &scrolls[scroll_idx]).await.unwrap();
-                    println!("Removed scroll: {}", scrolls[scroll_idx].scroll_path);
+                    delete_scroll(pool, &scrolls[scroll_idx].scroll_id).await.unwrap();
                 } else {
                     println!("Invalid index.");
                 }

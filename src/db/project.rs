@@ -1,5 +1,6 @@
 use sqlx::sqlite::SqlitePool;
 use anyhow::Result;
+use crate::utils::db_utils::delete_module;
 use crate::utils::structs::Project;
 use crate::utils::logger::{log_info, log_error};
 
@@ -36,35 +37,6 @@ pub async fn get_projects(pool: &SqlitePool) -> Result<Vec<Project>> {
             Err(error.into())
         }
     }
-}
-
-pub async fn delete_module(
-    pool: &SqlitePool,
-    table: &str,
-    column_name: &str,
-    column_value: &str,
-) -> Result<()> {
-    // Construct the query dynamically
-    let query = format!("DELETE FROM {} WHERE {} = ?", table, column_name);
-
-    // Execute the query with the given value as a parameter
-    if let Err(error) = sqlx::query(&query)
-        .bind(column_value)
-        .execute(pool)
-        .await
-    {
-        log_error(&format!(
-            "FAILED :: DELETE from {} where {} = {}",
-            table, column_name, column_value
-        ));
-        return Err(error.into());
-    }
-
-    log_info(&format!(
-        "SUCCESSFUL :: DELETE from {} where {} = {}",
-        table, column_name, column_value
-    ));
-    Ok(())
 }
 
 pub async fn delete_project(pool: &SqlitePool, project_id: &str) -> Result<()> {
