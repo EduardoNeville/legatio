@@ -125,11 +125,10 @@ fn helper_print(prompts: &Vec<Prompt>, prompt: &Prompt, b_depth: &str) -> Result
     Ok(())
 }
 
-pub async fn usr_prompts(pool: &SqlitePool, project_id: &str) -> Result<()> {
-    let prompts = get_prompts(pool, &project_id).await.unwrap();
+pub async fn usr_prompts(prompts: &Vec<Prompt>) -> Result<()> {
 
     let fst_prompts: Vec<&Prompt> = prompts.iter().filter(
-        |p| &p.prev_prompt_id == &project_id
+        |p| &p.prev_prompt_id == &p.project_id
     ).collect();
 
     for fst_prompt in fst_prompts.iter() {

@@ -40,20 +40,6 @@ pub async fn get_prompts(pool: &SqlitePool, project_id: &str)-> Result<Vec<Promp
     Ok(prompts)
 }
 
-pub async fn get_child_prompts(pool: &SqlitePool, prompt_id: &str)-> Result<Vec<Prompt>> {
-    let prompts: Vec<Prompt> = sqlx::query_as::<_, Prompt>(
-        "SELECT * 
-        FROM prompts
-        WHERE prev_prompt_id = $1;")
-        .bind(prompt_id)
-        .fetch_all(pool)
-        .await
-        .unwrap();
-
-    Ok(prompts)
-}
-
-
 pub async fn update_prompt(
     pool: &SqlitePool,
     col_set_name: &str,

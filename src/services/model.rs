@@ -6,8 +6,6 @@ use anyhow::{Result, Context};
 
 use crate::utils::structs::Prompt;
 
-use super::ui::highlight;
-
 pub async fn get_openai_response(
     system_prompt: &str,
     messages: Option<Vec<Prompt>>,
@@ -75,7 +73,6 @@ pub async fn get_openai_response(
 
     let result = client.chat_completion(req).await.unwrap();
     let answer = result.choices[0].message.content.clone().unwrap();
-    highlight(&answer, "md");
 
     Ok(answer)
 }

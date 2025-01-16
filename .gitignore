@@ -1,13 +1,18 @@
+# Build file
 /target
 
+# Test db
 *.db
+legatio.db-shm 
+legatio.db-wal
 
+# Db generation
 migrations/
 
 mocks/
 misc/
 
-legatio.db-shm 
-legatio.db-wal
-
 legatio.md
+
+# Performance metrics
+perf.*

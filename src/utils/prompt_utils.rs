@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use super::structs::{Scroll, Prompt};
 
 pub fn system_prompt(scrolls: &[Scroll])-> String {
@@ -13,18 +15,29 @@ pub fn system_prompt(scrolls: &[Scroll])-> String {
 }
 
 pub fn prompt_chain(prompts: &[Prompt], prompt: &Prompt) -> Vec<Prompt> {
-    let mut chain: Vec<Prompt> = vec![prompt.to_owned()];
-    let mut prev_prompt_id = &prompt.prev_prompt_id;
-    while prev_prompt_id != &prompt.project_id {
-        let curr_prompt = prompts.iter().find(
-            |p| &p.prompt_id == prev_prompt_id
-        ).unwrap();
-        chain.push(curr_prompt.to_owned());
-        prev_prompt_id = &curr_prompt.prev_prompt_id;
+    let mut prompt_map: HashMap<&str, &Prompt> = prompts
+        .into_iter()
+        .map(|prompt| (prompt.prompt_id.as_ref(), prompt))
+        .collect();
+
+    let mut chain = Vec::<Prompt>::new();
+    let mut current_id: Option<&str> = Some(prompt.prompt_id.as_ref());
+
+    while let Some(id) = current_id {
+        if let Some(prompt) = prompt_map.remove(id) {
+            current_id = if prompt.prev_prompt_id.is_empty() {
+                None
+            } else {
+                Some(prompt.prev_prompt_id.as_ref())
+            };
+            chain.push(prompt.to_owned());
+        } else {
+            break;
+        }
     }
-    chain.reverse();
-    return chain
-} 
+
+    return chain;
+}
 
 pub fn format_prompt(p: &Prompt)-> String {
     format!(

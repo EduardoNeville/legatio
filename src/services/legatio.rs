@@ -1,7 +1,19 @@
+use ratatui::{backend::CrosstermBackend, Terminal};
+use ratatui::layout::{Constraint, Direction, Layout};
+use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph};
+use ratatui::style::{Style, Color};
+use crossterm::{
+    event::{self, Event, KeyCode, KeyEvent},
+    execute,
+    terminal::{disable_raw_mode, enable_raw_mode},
+};
+
 use std::{
     fs::{self, File, OpenOptions},
     path::PathBuf
 };
+
+use std::io;
 use std::io::prelude::*;
 
 use sqlx::{Result, SqlitePool};
@@ -39,6 +51,12 @@ impl Legatio {
     }
 
     pub async fn run(&mut self, pool: &SqlitePool) -> Result<()> {
+        // Initialize terminal
+        enable_raw_mode().unwrap();
+        let stdout = io::stdout();
+        let backend = CrosstermBackend::new(stdout);
+        let mut terminal = Terminal::new(backend).unwrap();
+
         // Fetch projects for initialization
         let projects = get_projects(pool).await.unwrap();
         if !projects.is_empty() {
@@ -52,11 +70,15 @@ impl Legatio {
                 AppState::NewProject => {
                     // Handle creating a new project
                     self.state = self.handle_new_project(
+                        &mut terminal,
                         pool,
                     ).await.unwrap();
                 }
                 AppState::SelectProject => {
-                    self.state = self.handle_select_project(pool).await.unwrap();
+                    self.state = self.handle_select_project(
+                        &mut terminal,
+                        pool
+                    ).await.unwrap();
                 }
                 AppState::SelectPrompt => {
                     self.state = self.handle_select_prompt(pool).await.unwrap();
@@ -73,34 +95,48 @@ impl Legatio {
 
     async fn handle_new_project(
         &mut self,
+        terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
         pool: &SqlitePool,
     ) -> Result<AppState> {
-        println!("Welcome! You do not have a project yet.");
-
         loop {
-            clear_screen();
-            println!(" [1]: Create a new project\n [2]: Exit");
+            terminal.draw(|f| {
+                let chunks = Layout::default()
+                    .direction(Direction::Vertical)
+                    .constraints([Constraint::Percentage(100)].as_ref())
+                    .split(f.size());
 
-            let choice = usr_ask("Enter your choice: ").unwrap();
+                let block = Block::default()
+                    .title("New Project")
+                    .borders(Borders::ALL);
 
-            match choice {
-                1 => {
-                    // Logic to create a new project
-                    println!("Creating a new project...");
-                    let selected_dir = select_files(None)
-                        .expect("Failed to select directory");
-                    let project = Project::new(&selected_dir);
-                    store_project(pool, &project).await.unwrap();
-                    println!("Project '{}' created.", project.project_path);
-                    self.current_project = Some(project.clone());
-                    return Ok(AppState::EditScrolls);
-                }
-                2 => {
-                    println!("Exiting the application...");
-                    std::process::exit(0);
-                }
-                _ => {
-                    println!("Invalid choice, please try again.");
+                let items = vec![
+                    ListItem::new("[n] New Project"),
+                    ListItem::new("[e] Exit"),
+                ];
+
+                let list = List::new(items).block(block);
+                f.render_widget(list, chunks[0]);
+            }).unwrap();
+
+            if let Event::Key(KeyEvent { code, .. }) = event::read().unwrap() {
+                match code {
+                    KeyCode::Char('n') => {
+                        // Logic to create a new project
+                        log_info("Creating a new project...");
+                        let selected_dir = select_files(None)
+                            .expect("Failed to select directory");
+                        let project = Project::new(&selected_dir);
+                        store_project(pool, &project).await.unwrap();
+                        println!("Project '{}' created.", project.project_path);
+                        self.current_project = Some(project.clone());
+                        return Ok(AppState::EditScrolls);
+                    }
+                    KeyCode::Char('e') => {
+                        disable_raw_mode().unwrap();
+                        println!("Exiting application...");
+                        std::process::exit(0);
+                    }
+                    _ => continue,
                 }
             }
         }
@@ -151,16 +187,7 @@ impl Legatio {
 
             if choice < projects_len {
                 self.current_project = Some(projects[choice].clone());
-                let prompts = get_prompts(
-                    pool,
-                    &self.current_project.as_ref().unwrap().project_id
-                ).await.unwrap();
-
-                if prompts.is_empty() {
-                    return Ok(AppState::AskModel);
-                } else {
-                    return Ok(AppState::SelectPrompt);
-                }
+                return Ok(AppState::SelectPrompt);
             } else if choice == projects_len {
                 // Create a new project
                 return Ok(AppState::NewProject);
@@ -207,8 +234,7 @@ impl Legatio {
             if !prompts.is_empty() {
                 println!("{}", &proj_prompt);
                 usr_prompts(
-                    pool,
-                    &self.current_project.as_ref().unwrap().project_id
+                    prompts.as_ref()
                 ).await.unwrap();
 
                 println!(" [0]: Select Prompt");
@@ -300,6 +326,9 @@ impl Legatio {
                 ).join("legatio.md")
             );
 
+            let mut prompts: Option<Vec<Prompt>> = None;
+            let mut pmp_chain: Option<Vec<Prompt>> = None;
+
             if !file_prompt.is_ok() {
                 File::create(
                     &PathBuf::from(
@@ -308,18 +337,18 @@ impl Legatio {
                 ).expect("Could not create file!");
             } else if prompt.is_some() {
 
-                let prompts = get_prompts(
+                prompts = Some(get_prompts(
                     pool, 
                     &self.current_project.as_ref().unwrap().project_id
-                ).await.unwrap();
+                ).await.unwrap());
 
-                let pmp_chain: Vec<Prompt> = prompt_chain(
-                    &prompts,
+                pmp_chain = Some(prompt_chain(
+                    prompts.as_ref().unwrap().as_ref(),
                     &self.current_prompt.as_ref().unwrap()
-                );
+                ));
 
                 println!(" [ Prompt Chain ]");
-                usr_prompt_chain(&pmp_chain);
+                usr_prompt_chain(pmp_chain.as_ref().unwrap().as_ref());
 
             }
 
@@ -333,15 +362,17 @@ impl Legatio {
             match choice  {
                 1 => { 
                     let sys_prompt = system_prompt(&scrolls);
-                    let prompts = get_prompts(
-                        pool, 
-                        &self.current_project.as_ref().unwrap().project_id
-                    ).await.unwrap();
+                    
+                    if prompts.as_ref().is_none() {
+                        prompts = Some(get_prompts(
+                            pool, 
+                            &self.current_project.as_ref().unwrap().project_id
+                        ).await.unwrap());
+                    }
 
-                    let mut pmp_chain = None;
-                    if !prompts.is_empty() && prompt.is_some() {
+                    if !prompts.as_ref().unwrap().is_empty() && prompt.is_some() {
                         pmp_chain = Some(prompt_chain(
-                            &prompts,
+                            &prompts.as_ref().unwrap().as_ref(),
                             prompt.unwrap()
                         ));
                     }
