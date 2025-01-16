@@ -8,7 +8,7 @@ use sqlx::{Result, SqlitePool};
 use crate::{
     db::{
         project::{delete_project, get_projects, store_project},
-        prompt::{get_prompts, store_prompt},
+        prompt::{delete_prompt, get_prompts, store_prompt},
         scroll::{delete_scroll, get_scrolls, store_scroll}
     },
     services::{
@@ -243,7 +243,27 @@ impl Legatio {
                     }
                 },
                 1 => {
-                    todo!("Delete prompt");
+                    if !prompts.is_empty() {
+                        let concat_prompts: Vec<String> = prompts
+                            .iter()
+                            .map(|p| format_prompt(p) )
+                            .collect();
+
+                        let sel_p: String = item_selector(concat_prompts.clone()).unwrap().unwrap();
+                        let sel_idx = concat_prompts.iter().position(|p| *p == sel_p).unwrap();
+                        let del_prompt = match prompts.get(sel_idx) {
+                            Some(p) => Some(p.to_owned()),
+                            _ => None,
+                        };
+
+                        delete_prompt(pool, &del_prompt.unwrap())
+                            .await
+                            .expect("Unable to delete prompt");
+
+                        return Ok(AppState::SelectPrompt);
+                    } else {
+                        println!("Invalid input, try again.");
+                    }
                 },
                 2 => {
                     return Ok(AppState::SelectProject);
