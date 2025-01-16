@@ -51,6 +51,7 @@ impl Legatio {
     }
 
     pub async fn run(&mut self, pool: &SqlitePool) -> Result<()> {
+        clear_screen();
         // Initialize terminal
         enable_raw_mode().unwrap();
         let stdout = io::stdout();
@@ -103,7 +104,7 @@ impl Legatio {
                 let chunks = Layout::default()
                     .direction(Direction::Vertical)
                     .constraints([Constraint::Percentage(100)].as_ref())
-                    .split(f.size());
+                    .split(f.area());
 
                 let block = Block::default()
                     .title("New Project")
@@ -144,71 +145,101 @@ impl Legatio {
 
     async fn handle_select_project(
         &mut self,
+        terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
         pool: &SqlitePool,
     ) -> Result<AppState> {
         loop {
-            clear_screen();
             let projects = get_projects(pool).await.unwrap();
-            if self.current_project.is_some() {
-                println!(" [ Current Project: {} ] ", 
+
+            let title = if self.current_project.is_some() {
+                format!(" [ Current Project: {} ] ", 
                     self.current_project.as_ref().unwrap()
                     .project_path
                     .split("/")
                     .last()
                     .unwrap()
-                );
+                )
             } else {
-                println!(" [ Current Project: {} ] ", 
+                format!(" [ Current Project: {} ] ", 
                     projects.get(0).unwrap()
                     .project_path
                     .split("/")
                     .last()
                     .unwrap()
-                );
-            }
+                )
+            };
 
-            for (idx, project) in projects.iter().enumerate() {
-                println!(
-                    " [{}]: {:?}",
-                    idx,
+            let mut items = vec![];
+            let mut proj_items = vec![];
+            for project in projects.iter() {
+                let proj_item = format!(
+                    " -[ {:?} ]-",
                     project.project_path
                         .split("/")
                         .last()
                         .unwrap()
                 );
+                proj_items.push(proj_item.clone());
+                items.push(ListItem::new(proj_item));
             }
+            items.push(ListItem::new("[s] Select Project"));
+            items.push(ListItem::new("[n] New Project"));
+            items.push(ListItem::new("[d] Delete Project"));
+            items.push(ListItem::new("[e] Exit"));
 
-            let projects_len = projects.len();
-            println!(" [{}]: New Project", projects_len);
-            println!(" [{}]: Delete Current Project", projects_len + 1);
-            println!(" [{}]: Exit", projects_len + 2);
+            terminal.draw(|f| {
+                let chunks = Layout::default()
+                    .direction(Direction::Vertical)
+                    .constraints([Constraint::Percentage(100)].as_ref())
+                    .split(f.area());
 
-            let choice = usr_ask(" [ Select Option ]").unwrap();
+                let block = Block::default()
+                    .title(title)
+                    .borders(Borders::ALL);
 
-            if choice < projects_len {
-                self.current_project = Some(projects[choice].clone());
-                return Ok(AppState::SelectPrompt);
-            } else if choice == projects_len {
-                // Create a new project
-                return Ok(AppState::NewProject);
-            } else if choice == projects_len + 1 {
-                // Delete current project
-                if self.current_project.is_some() {
-                    delete_project(
-                        pool,
-                        &self.current_project.as_ref().unwrap().project_id
-                    ).await.unwrap();
-                    
-                    self.current_project = None;
-                    return Ok(AppState::SelectProject)
+                let list = List::new(items).block(block);
+                f.render_widget(list, chunks[0]);
+            }).unwrap();
+
+
+            if let Event::Key(KeyEvent { code, .. }) = event::read().unwrap() {
+                match code {
+                    KeyCode::Char('s') => {
+                        if !proj_items.is_empty() {
+                            let sel_p: String = item_selector(proj_items.to_owned()).unwrap().unwrap();
+                            let sel_idx = proj_items.iter().position(|p| *p == sel_p).unwrap();
+                            self.current_project = match projects.get(sel_idx) {
+                                Some(p) => Some(p.to_owned()),
+                                _ => None,
+                            };
+                            return Ok(AppState::SelectPrompt);
+                        } else {
+                            continue
+                        }
+                    }
+                    KeyCode::Char('n') => {
+                        return Ok(AppState::NewProject);
+                    }
+                    KeyCode::Char('d') => {
+                        if !proj_items.is_empty() {
+                            let sel_p: String = item_selector(proj_items.to_owned()).unwrap().unwrap();
+                            let sel_idx = proj_items.iter().position(|p| *p == sel_p).unwrap();
+                            let del_proj = projects.get(sel_idx).unwrap();
+                            delete_project(pool, &del_proj.project_id)
+                                .await
+                                .expect("Unable to delete project");
+                            continue
+                        } else {
+                            continue
+                        }
+                    }
+                    KeyCode::Char('e') => {
+                        disable_raw_mode().unwrap();
+                        println!("Exiting application...");
+                        std::process::exit(0);
+                    }
+                    _ => continue,
                 }
-                return Ok(AppState::NewProject);
-            } else if choice == projects_len + 2 {
-                // Exit
-                println!("Exiting application...");
-                std::process::exit(0);
-            } else {
-                println!("Invalid input, try again.");
             }
         }
     }
