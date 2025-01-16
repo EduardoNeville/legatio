@@ -113,7 +113,23 @@ impl Legatio {
         loop {
             clear_screen();
             let projects = get_projects(pool).await.unwrap();
-            println!(" [ Project Selection ] ");
+            if self.current_project.is_some() {
+                println!(" [ Current Project: {} ] ", 
+                    self.current_project.as_ref().unwrap()
+                    .project_path
+                    .split("/")
+                    .last()
+                    .unwrap()
+                );
+            } else {
+                println!(" [ Current Project: {} ] ", 
+                    projects.get(0).unwrap()
+                    .project_path
+                    .split("/")
+                    .last()
+                    .unwrap()
+                );
+            }
 
             for (idx, project) in projects.iter().enumerate() {
                 println!(
@@ -150,7 +166,15 @@ impl Legatio {
                 return Ok(AppState::NewProject);
             } else if choice == projects_len + 1 {
                 // Delete current project
-                //delete_project(pool, &self.current_project.unwrap().project_id).await.unwrap();
+                if self.current_project.is_some() {
+                    delete_project(
+                        pool,
+                        &self.current_project.as_ref().unwrap().project_id
+                    ).await.unwrap();
+                    
+                    self.current_project = None;
+                    return Ok(AppState::SelectProject)
+                }
                 return Ok(AppState::NewProject);
             } else if choice == projects_len + 2 {
                 // Exit
@@ -167,7 +191,7 @@ impl Legatio {
         pool: &SqlitePool,
     ) -> Result<AppState> {
         loop {
-
+            clear_screen();
             // Show prompts
             let prompts = get_prompts(
                 pool,
@@ -236,6 +260,7 @@ impl Legatio {
         pool: &SqlitePool,
     ) -> Result<AppState> {
         loop {
+            clear_screen();
             // Preparing scrolls 
             let scrolls = get_scrolls(
                 pool,

@@ -17,7 +17,7 @@ pub async fn store_project(pool: &SqlitePool, project: &Project) -> Result<()> {
         return Err(error.into());
     }
 
-    log_info("Project insertion successful");
+    log_info(&format!("Insert successfull of project: {}", project.project_id));
     Ok(())
 }
 
@@ -38,18 +38,49 @@ pub async fn get_projects(pool: &SqlitePool) -> Result<Vec<Project>> {
     }
 }
 
-pub async fn delete_project(pool: &SqlitePool, project_id: &str) -> Result<()> {
-    log_info(&format!("Deleting project: {}", &project_id));
+pub async fn delete_module(
+    pool: &SqlitePool,
+    table: &str,
+    column_name: &str,
+    column_value: &str,
+) -> Result<()> {
+    // Construct the query dynamically
+    let query = format!("DELETE FROM {} WHERE {} = ?", table, column_name);
 
-    if let Err(error) =  sqlx::query("DELETE FROM projects WHERE project_id = $1")
-        .bind(&project_id)
+    // Execute the query with the given value as a parameter
+    if let Err(error) = sqlx::query(&query)
+        .bind(column_value)
         .execute(pool)
         .await
     {
-        log_error(&format!("Unable to DELETE project: {}", project_id));
+        log_error(&format!(
+            "FAILED :: DELETE from {} where {} = {}",
+            table, column_name, column_value
+        ));
         return Err(error.into());
     }
+
+    log_info(&format!(
+        "SUCCESSFUL :: DELETE from {} where {} = {}",
+        table, column_name, column_value
+    ));
+    Ok(())
+}
+
+pub async fn delete_project(pool: &SqlitePool, project_id: &str) -> Result<()> {
+    let col_name = "project_id";
+    delete_module(pool, &"projects", &col_name, project_id)
+        .await
+        .expect("Error in project deletion");
+
     
-    log_info("Successfully deleted project");
+    delete_module(pool, &"prompts", &col_name, project_id)
+        .await
+        .expect("Error in prompts deletion");
+
+    delete_module(pool, &"scrolls", &col_name, project_id)
+        .await
+        .expect("Error in scoll deletion");
+
     Ok(())
 }
