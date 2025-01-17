@@ -24,10 +24,6 @@ async fn main() -> Result<()> {
     app.run(&pool).await.unwrap();
 
     Ok(())
-    //let terminal = ratatui::init();
-    //let result = AppState::new().run(&pool, terminal).await;
-    //ratatui::restore();
-    //return result;
     
 }
 

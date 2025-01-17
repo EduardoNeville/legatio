@@ -26,13 +26,15 @@ use crate::{
     services::{
         model::get_openai_response, 
         search::{item_selector, select_files}, 
-        ui::{clear_screen, usr_ask, usr_prompt_chain, usr_scrolls}
+        ui::{clear_screen, usr_ask, usr_prompt_chain, usr_scrolls},
+        display::AppState
     },
     utils::{
-        file_utils::read_file, logger::log_info, prompt_utils::{format_prompt, prompt_chain, system_prompt}, structs::{AppState, Project, Prompt, Scroll}
+        file_utils::read_file, logger::log_info, prompt_utils::{format_prompt, prompt_chain, system_prompt}, structs::{Project, Prompt, Scroll}
     }
 };
 
+use super::display::{build_project_list, display_project_list, format_project_title, InputEvent};
 use super::ui::usr_prompts;
 
 pub struct Legatio {
@@ -93,109 +95,47 @@ impl Legatio {
         pool: &SqlitePool,
     ) -> Result<AppState> {
         loop {
+            clear_screen();
+
+            // Fetch and display projects
             let projects = get_projects(pool).await.unwrap();
+            let title = format_project_title(&self.current_project);
 
-            let title = if self.current_project.is_some() {
-                format!("[ Current Project: {} ]", 
-                    self.current_project.as_ref().unwrap()
-                    .project_path
-                    .split("/")
-                    .last()
-                    .unwrap()
-                )
-            } else {
-                format!("[ Project Selection ]", 
-                )
-            };
+            let (items, proj_items) = build_project_list(&projects);
+            display_project_list(terminal, &title, items).unwrap();
 
-            let mut items = vec![];
-            let mut proj_items = vec![];
-            for project in projects.iter() {
-                let proj_item = format!(
-                    " -[ {:?} ]-",
-                    project.project_path
-                        .split("/")
-                        .last()
-                        .unwrap()
-                );
-                proj_items.push(proj_item.clone());
-                items.push(ListItem::new(proj_item));
-            }
-            items.push(ListItem::new("[s] Select Project"));
-            items.push(ListItem::new("[n] New Project"));
-            items.push(ListItem::new("[d] Delete Project"));
-            items.push(ListItem::new("[e] Exit"));
-
-            terminal.draw(|f| {
-                let chunks = Layout::default()
-                    .direction(Direction::Vertical)
-                    .constraints([Constraint::Percentage(100)].as_ref())
-                    .split(f.area());
-
-                let block = Block::default()
-                    .title(title)
-                    .borders(Borders::ALL);
-
-                let list = List::new(items).block(block);
-                f.render_widget(list, chunks[0]);
-            }).unwrap();
-
-
-            if let Event::Key(KeyEvent { code, .. }) = event::read().unwrap() {
-                match code {
-                    KeyCode::Char('s') => {
+            // Handle input
+            if let Event::Key(key_event) = event::read().unwrap() {
+                match InputEvent::from(key_event) {
+                    InputEvent::Select => {
                         if !proj_items.is_empty() {
-                            let sel_p: String = item_selector(proj_items.to_owned()).unwrap().unwrap();
+                            let sel_p: String = item_selector(proj_items.clone()).unwrap().unwrap_or_default();
                             let sel_idx = proj_items.iter().position(|p| *p == sel_p).unwrap();
-                            self.current_project = match projects.get(sel_idx) {
-                                Some(p) => Some(p.to_owned()),
-                                _ => None,
-                            };
+                            self.current_project = Some(projects[sel_idx].clone());
                             return Ok(AppState::SelectPrompt);
-                        } else {
-                            log_info("Creating a new project...");
-                            let selected_dir = select_files(None)
-                                .expect("Failed to select directory");
-                            let project = Project::new(&selected_dir);
-                            store_project(pool, &project).await.unwrap();
-                            println!("Project '{}' created.", project.project_path);
-                            self.current_project = Some(project.clone());
-                            return Ok(AppState::EditScrolls);
                         }
                     }
-                    KeyCode::Char('n') => {
-                        // Logic to create a new project
-                        log_info("Creating a new project...");
-                        let selected_dir = select_files(None)
-                            .expect("Failed to select directory");
+                    InputEvent::New => {
+                        let selected_dir = select_files(None).unwrap();
                         let project = Project::new(&selected_dir);
                         store_project(pool, &project).await.unwrap();
-                        println!("Project '{}' created.", project.project_path);
                         self.current_project = Some(project.clone());
                         return Ok(AppState::EditScrolls);
                     }
-                    KeyCode::Char('d') => {
+                    InputEvent::Delete => {
                         if !proj_items.is_empty() {
-                            let sel_p: String = item_selector(proj_items.to_owned()).unwrap().unwrap();
+                            let sel_p: String = item_selector(proj_items.clone()).unwrap().unwrap_or_default();
                             let sel_idx = proj_items.iter().position(|p| *p == sel_p).unwrap();
-                            let del_proj = projects.get(sel_idx).unwrap();
-                            delete_project(pool, &del_proj.project_id)
-                                .await
-                                .expect("Unable to delete project");
-                            continue
-                        } else {
-                            continue
+                            delete_project(pool, &projects[sel_idx].project_id).await.unwrap();
+                            continue;
                         }
                     }
-                    KeyCode::Char('e') => {
-                        disable_raw_mode().unwrap();
-                        println!("Exiting application...");
-                        std::process::exit(0);
-                    }
+                    InputEvent::Quit => break,
                     _ => continue,
                 }
             }
         }
+        Ok(AppState::SelectProject)
     }
 
     async fn handle_select_prompt(
