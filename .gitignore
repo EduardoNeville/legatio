@@ -16,3 +16,6 @@ legatio.md
 
 # Performance metrics
 perf.*
+
+# Logger
+*.log
