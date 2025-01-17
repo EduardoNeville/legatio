@@ -2,7 +2,6 @@ use sqlx::FromRow;
 use uuid::Uuid;
 
 pub enum AppState {
-    NewProject,
     SelectProject,
     SelectPrompt,
     AskModel,

@@ -33,6 +33,8 @@ anyhow = "1.0"
 
 # Logging
 log = "0.4"
+fern = "0.7.1"
+chrono = "0.4.39"
 env_logger = "0.10"
 
 # Search
@@ -54,3 +56,5 @@ crossterm = "0.28.1"
 # Syntax
 syntect = "5.2"
 pulldown-cmark = "0.12.2"
+
+unicode-truncate = "2.0.0"

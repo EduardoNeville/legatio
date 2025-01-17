@@ -44,7 +44,7 @@ pub struct Legatio {
 impl Legatio {
     pub fn new() -> Self {
         Legatio {
-            state: AppState::NewProject,
+            state: AppState::SelectProject,
             current_project: None,
             current_prompt: None,
         }
@@ -68,13 +68,6 @@ impl Legatio {
         loop {
             let current_state = &self.state; // Clone the state to avoid borrowing issues
             match current_state {
-                AppState::NewProject => {
-                    // Handle creating a new project
-                    self.state = self.handle_new_project(
-                        &mut terminal,
-                        pool,
-                    ).await.unwrap();
-                }
                 AppState::SelectProject => {
                     self.state = self.handle_select_project(
                         &mut terminal,
@@ -94,55 +87,6 @@ impl Legatio {
         }
     }
 
-    async fn handle_new_project(
-        &mut self,
-        terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
-        pool: &SqlitePool,
-    ) -> Result<AppState> {
-        loop {
-            terminal.draw(|f| {
-                let chunks = Layout::default()
-                    .direction(Direction::Vertical)
-                    .constraints([Constraint::Percentage(100)].as_ref())
-                    .split(f.area());
-
-                let block = Block::default()
-                    .title("New Project")
-                    .borders(Borders::ALL);
-
-                let items = vec![
-                    ListItem::new("[n] New Project"),
-                    ListItem::new("[e] Exit"),
-                ];
-
-                let list = List::new(items).block(block);
-                f.render_widget(list, chunks[0]);
-            }).unwrap();
-
-            if let Event::Key(KeyEvent { code, .. }) = event::read().unwrap() {
-                match code {
-                    KeyCode::Char('n') => {
-                        // Logic to create a new project
-                        log_info("Creating a new project...");
-                        let selected_dir = select_files(None)
-                            .expect("Failed to select directory");
-                        let project = Project::new(&selected_dir);
-                        store_project(pool, &project).await.unwrap();
-                        println!("Project '{}' created.", project.project_path);
-                        self.current_project = Some(project.clone());
-                        return Ok(AppState::EditScrolls);
-                    }
-                    KeyCode::Char('e') => {
-                        disable_raw_mode().unwrap();
-                        println!("Exiting application...");
-                        std::process::exit(0);
-                    }
-                    _ => continue,
-                }
-            }
-        }
-    }
-
     async fn handle_select_project(
         &mut self,
         terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
@@ -152,7 +96,7 @@ impl Legatio {
             let projects = get_projects(pool).await.unwrap();
 
             let title = if self.current_project.is_some() {
-                format!(" [ Current Project: {} ] ", 
+                format!("[ Current Project: {} ]", 
                     self.current_project.as_ref().unwrap()
                     .project_path
                     .split("/")
@@ -160,12 +104,7 @@ impl Legatio {
                     .unwrap()
                 )
             } else {
-                format!(" [ Current Project: {} ] ", 
-                    projects.get(0).unwrap()
-                    .project_path
-                    .split("/")
-                    .last()
-                    .unwrap()
+                format!("[ Project Selection ]", 
                 )
             };
 
@@ -214,11 +153,26 @@ impl Legatio {
                             };
                             return Ok(AppState::SelectPrompt);
                         } else {
-                            continue
+                            log_info("Creating a new project...");
+                            let selected_dir = select_files(None)
+                                .expect("Failed to select directory");
+                            let project = Project::new(&selected_dir);
+                            store_project(pool, &project).await.unwrap();
+                            println!("Project '{}' created.", project.project_path);
+                            self.current_project = Some(project.clone());
+                            return Ok(AppState::EditScrolls);
                         }
                     }
                     KeyCode::Char('n') => {
-                        return Ok(AppState::NewProject);
+                        // Logic to create a new project
+                        log_info("Creating a new project...");
+                        let selected_dir = select_files(None)
+                            .expect("Failed to select directory");
+                        let project = Project::new(&selected_dir);
+                        store_project(pool, &project).await.unwrap();
+                        println!("Project '{}' created.", project.project_path);
+                        self.current_project = Some(project.clone());
+                        return Ok(AppState::EditScrolls);
                     }
                     KeyCode::Char('d') => {
                         if !proj_items.is_empty() {

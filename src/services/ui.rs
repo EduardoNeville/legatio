@@ -104,9 +104,10 @@ pub async fn usr_scrolls(pool: &SqlitePool, project: &Project) -> Result<()> {
     Ok(())
 }
 
-fn helper_print(prompts: &Vec<Prompt>, prompt: &Prompt, b_depth: &str) -> Result<()> {
-    println!("{}", b_depth);
-    println!("{}", format_prompt_depth(prompt, b_depth));  // Print the prompt using the current indentation
+fn helper_print(prompts: &Vec<Prompt>, prompt: &Prompt, b_depth: &str) -> Result<Vec<String>> {
+    let mut format_vec: Vec<String> = vec![];
+    format_vec.push(b_depth.to_string());
+    format_vec.push(format_prompt_depth(prompt, b_depth));
 
     let new_indent = format!("{}  |", b_depth);  // Append to the current indentation for children
     let child_prompts: Vec<&Prompt> = prompts
@@ -115,27 +116,30 @@ fn helper_print(prompts: &Vec<Prompt>, prompt: &Prompt, b_depth: &str) -> Result
         .collect();
 
     for p in child_prompts.iter() {
-        helper_print(
+        let child_vec = helper_print(
             prompts,
             p,
             &new_indent
         ).expect(&format!("Error parsing prompt: {:?}", p.prompt_id));
+        format_vec = [format_vec, child_vec].concat();
     }
 
-    Ok(())
+    Ok(format_vec)
 }
 
-pub async fn usr_prompts(prompts: &Vec<Prompt>) -> Result<()> {
+pub async fn usr_prompts(prompts: &Vec<Prompt>) -> Result<Vec<String>> {
 
     let fst_prompts: Vec<&Prompt> = prompts.iter().filter(
         |p| &p.prev_prompt_id == &p.project_id
     ).collect();
 
+    let mut format_vec: Vec<String> = vec![];
     for fst_prompt in fst_prompts.iter() {
-        helper_print(&prompts, fst_prompt, "  |").expect(&format!("Error parsing prompt: {:?}", fst_prompt.prompt_id));
+        let child_vec = helper_print(&prompts, fst_prompt, "  |").expect(&format!("Error parsing prompt: {:?}", fst_prompt.prompt_id));
+        format_vec = [format_vec, child_vec].concat();
     }
 
-    Ok(())
+    Ok(format_vec)
 }
 
 pub fn clear_screen() {

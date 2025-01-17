@@ -1,0 +1,938 @@
+2025-01-17 15:04:26 [INFO] PRAGMA foreign_keys = ON; …; rows affected: 0, rows returned: 0, elapsed: 62.541µs
+
+PRAGMA foreign_keys = ON;
+
+2025-01-17 15:04:26 [INFO] Fetching all projects from the database
+2025-01-17 15:04:26 [INFO] SELECT * FROM projects;; rows affected: 0, rows returned: 0, elapsed: 604.350µs
+2025-01-17 15:04:31 [INFO] Creating a new project...
+2025-01-17 15:04:33 [INFO] Attempting to store a new project into the database
+2025-01-17 15:04:33 [INFO] INSERT INTO projects (project_id, …; rows affected: 1, rows returned: 0, elapsed: 10.629ms
+
+INSERT INTO
+  projects (project_id, project_path)
+VALUES
+  ($1, $2)
+
+2025-01-17 15:04:33 [INFO] Insert successfull of project: 049c797a-3c64-44c7-b144-0a9e52b9c419
+2025-01-17 15:04:33 [INFO] PRAGMA foreign_keys = ON; …; rows affected: 0, rows returned: 0, elapsed: 41.195µs
+
+PRAGMA foreign_keys = ON;
+
+2025-01-17 15:04:33 [INFO] SELECT * FROM scrolls …; rows affected: 0, rows returned: 0, elapsed: 737.014µs
+
+SELECT
+  *
+FROM
+  scrolls
+WHERE
+  project_id = $1;
+
+2025-01-17 15:05:14 [INFO] SELECT * FROM prompts …; rows affected: 1, rows returned: 0, elapsed: 221.504µs
+
+SELECT
+  *
+FROM
+  prompts
+WHERE
+  project_id = $1;
+
+2025-01-17 15:05:14 [INFO] SELECT * FROM scrolls …; rows affected: 0, rows returned: 0, elapsed: 64.886µs
+
+SELECT
+  *
+FROM
+  scrolls
+WHERE
+  project_id = $1;
+
+2025-01-17 15:05:14 [INFO] SELECT * FROM scrolls …; rows affected: 1, rows returned: 0, elapsed: 257.339µs
+
+SELECT
+  *
+FROM
+  scrolls
+WHERE
+  project_id = $1;
+
+2025-01-17 15:05:32 [INFO] SELECT * FROM prompts …; rows affected: 0, rows returned: 0, elapsed: 252.732µs
+
+SELECT
+  *
+FROM
+  prompts
+WHERE
+  project_id = $1;
+
+2025-01-17 15:05:33 [INFO] Storing prompt in the database
+2025-01-17 15:05:33 [INFO] INSERT INTO prompts (prompt_id, …; rows affected: 1, rows returned: 0, elapsed: 10.693ms
+
+INSERT INTO
+  prompts (
+    prompt_id,
+    project_id,
+    prev_prompt_id,
+    content,
+    output
+  )
+VALUES
+  ($1, $2, $3, $4, $5)
+
+2025-01-17 15:05:33 [INFO] SELECT * FROM scrolls …; rows affected: 0, rows returned: 0, elapsed: 116.462µs
+
+SELECT
+  *
+FROM
+  scrolls
+WHERE
+  project_id = $1;
+
+2025-01-17 15:05:33 [INFO] SELECT * FROM scrolls …; rows affected: 1, rows returned: 0, elapsed: 85.852µs
+
+SELECT
+  *
+FROM
+  scrolls
+WHERE
+  project_id = $1;
+
+2025-01-17 15:05:33 [INFO] SELECT * FROM prompts …; rows affected: 0, rows returned: 1, elapsed: 120.845µs
+
+SELECT
+  *
+FROM
+  prompts
+WHERE
+  project_id = $1;
+
+2025-01-17 15:05:39 [INFO] SELECT * FROM prompts …; rows affected: 1, rows returned: 1, elapsed: 122.860µs
+
+SELECT
+  *
+FROM
+  prompts
+WHERE
+  project_id = $1;
+
+2025-01-17 15:12:22 [INFO] SELECT * FROM prompts …; rows affected: 0, rows returned: 1, elapsed: 50.064µs
+
+SELECT
+  *
+FROM
+  prompts
+WHERE
+  project_id = $1;
+
+2025-01-17 15:13:01 [INFO] Fetching all projects from the database
+2025-01-17 15:13:01 [INFO] SELECT * FROM projects;; rows affected: 1, rows returned: 1, elapsed: 30.879µs
+2025-01-17 15:13:01 [INFO] Fetching all projects from the database
+2025-01-17 15:13:01 [INFO] SELECT * FROM projects;; rows affected: 0, rows returned: 1, elapsed: 66.312µs
+2025-01-17 15:13:28 [INFO] PRAGMA foreign_keys = ON; …; rows affected: 0, rows returned: 0, elapsed: 60.402µs
+
+PRAGMA foreign_keys = ON;
+
+2025-01-17 15:13:28 [INFO] Fetching all projects from the database
+2025-01-17 15:13:28 [INFO] SELECT * FROM projects;; rows affected: 0, rows returned: 1, elapsed: 655.397µs
+2025-01-17 15:15:14 [INFO] Stating item selection... 
+2025-01-17 15:15:15 [INFO] SELECT * FROM prompts …; rows affected: 0, rows returned: 1, elapsed: 271.745µs
+
+SELECT
+  *
+FROM
+  prompts
+WHERE
+  project_id = $1;
+
+2025-01-17 15:18:23 [INFO] User selecting propmpt
+2025-01-17 15:18:23 [INFO] Stating item selection... 
+2025-01-17 15:18:23 [INFO] User selected prompt: b7672a61-9a04-4f97-ac9e-e083175b879d
+2025-01-17 15:18:23 [INFO] SELECT * FROM scrolls …; rows affected: 0, rows returned: 0, elapsed: 227.521µs
+
+SELECT
+  *
+FROM
+  scrolls
+WHERE
+  project_id = $1;
+
+2025-01-17 15:18:23 [INFO] PRAGMA foreign_keys = ON; …; rows affected: 0, rows returned: 0, elapsed: 42.350µs
+
+PRAGMA foreign_keys = ON;
+
+2025-01-17 15:18:23 [INFO] SELECT * FROM scrolls …; rows affected: 0, rows returned: 0, elapsed: 754.798µs
+
+SELECT
+  *
+FROM
+  scrolls
+WHERE
+  project_id = $1;
+
+2025-01-17 15:18:23 [INFO] SELECT * FROM prompts …; rows affected: 0, rows returned: 1, elapsed: 68.471µs
+
+SELECT
+  *
+FROM
+  prompts
+WHERE
+  project_id = $1;
+
+2025-01-17 15:18:37 [INFO] Storing prompt in the database
+2025-01-17 15:18:37 [INFO] INSERT INTO prompts (prompt_id, …; rows affected: 1, rows returned: 0, elapsed: 14.077ms
+
+INSERT INTO
+  prompts (
+    prompt_id,
+    project_id,
+    prev_prompt_id,
+    content,
+    output
+  )
+VALUES
+  ($1, $2, $3, $4, $5)
+
+2025-01-17 15:18:37 [INFO] SELECT * FROM scrolls …; rows affected: 0, rows returned: 0, elapsed: 115.880µs
+
+SELECT
+  *
+FROM
+  scrolls
+WHERE
+  project_id = $1;
+
+2025-01-17 15:18:37 [INFO] SELECT * FROM scrolls …; rows affected: 1, rows returned: 0, elapsed: 47.501µs
+
+SELECT
+  *
+FROM
+  scrolls
+WHERE
+  project_id = $1;
+
+2025-01-17 15:18:37 [INFO] SELECT * FROM prompts …; rows affected: 0, rows returned: 2, elapsed: 159.099µs
+
+SELECT
+  *
+FROM
+  prompts
+WHERE
+  project_id = $1;
+
+2025-01-17 15:19:36 [INFO] SELECT * FROM scrolls …; rows affected: 1, rows returned: 0, elapsed: 77.342µs
+
+SELECT
+  *
+FROM
+  scrolls
+WHERE
+  project_id = $1;
+
+2025-01-17 15:19:40 [INFO] Attempting to store a scroll in the database
+2025-01-17 15:19:40 [INFO] INSERT INTO scrolls (scroll_id, …; rows affected: 1, rows returned: 0, elapsed: 14.844ms
+
+INSERT INTO
+  scrolls (scroll_id, scroll_path, content, project_id)
+VALUES
+  ($1, $2, $3, $4)
+
+2025-01-17 15:19:40 [INFO] SELECT * FROM scrolls …; rows affected: 1, rows returned: 1, elapsed: 403.149µs
+
+SELECT
+  *
+FROM
+  scrolls
+WHERE
+  project_id = $1;
+
+2025-01-17 15:19:40 [INFO] SELECT * FROM scrolls …; rows affected: 1, rows returned: 1, elapsed: 122.795µs
+
+SELECT
+  *
+FROM
+  scrolls
+WHERE
+  project_id = $1;
+
+2025-01-17 15:19:42 [INFO] SELECT * FROM prompts …; rows affected: 1, rows returned: 2, elapsed: 147.251µs
+
+SELECT
+  *
+FROM
+  prompts
+WHERE
+  project_id = $1;
+
+2025-01-17 15:19:46 [INFO] User selecting propmpt
+2025-01-17 15:19:46 [INFO] Stating item selection... 
+2025-01-17 15:19:46 [INFO] User selected prompt: b7672a61-9a04-4f97-ac9e-e083175b879d
+2025-01-17 15:19:46 [INFO] SELECT * FROM scrolls …; rows affected: 1, rows returned: 1, elapsed: 137.097µs
+
+SELECT
+  *
+FROM
+  scrolls
+WHERE
+  project_id = $1;
+
+2025-01-17 15:19:46 [INFO] SELECT * FROM scrolls …; rows affected: 1, rows returned: 1, elapsed: 60.372µs
+
+SELECT
+  *
+FROM
+  scrolls
+WHERE
+  project_id = $1;
+
+2025-01-17 15:19:46 [INFO] SELECT * FROM prompts …; rows affected: 1, rows returned: 2, elapsed: 34.153µs
+
+SELECT
+  *
+FROM
+  prompts
+WHERE
+  project_id = $1;
+
+2025-01-17 15:20:05 [INFO] Storing prompt in the database
+2025-01-17 15:20:05 [INFO] INSERT INTO prompts (prompt_id, …; rows affected: 1, rows returned: 0, elapsed: 10.052ms
+
+INSERT INTO
+  prompts (
+    prompt_id,
+    project_id,
+    prev_prompt_id,
+    content,
+    output
+  )
+VALUES
+  ($1, $2, $3, $4, $5)
+
+2025-01-17 15:20:05 [INFO] SELECT * FROM scrolls …; rows affected: 1, rows returned: 1, elapsed: 96.584µs
+
+SELECT
+  *
+FROM
+  scrolls
+WHERE
+  project_id = $1;
+
+2025-01-17 15:20:05 [INFO] SELECT * FROM scrolls …; rows affected: 1, rows returned: 1, elapsed: 61.591µs
+
+SELECT
+  *
+FROM
+  scrolls
+WHERE
+  project_id = $1;
+
+2025-01-17 15:20:05 [INFO] SELECT * FROM prompts …; rows affected: 1, rows returned: 3, elapsed: 71.369µs
+
+SELECT
+  *
+FROM
+  prompts
+WHERE
+  project_id = $1;
+
+2025-01-17 15:33:57 [INFO] Storing prompt in the database
+2025-01-17 15:33:57 [INFO] PRAGMA foreign_keys = ON; …; rows affected: 0, rows returned: 0, elapsed: 54.616µs
+
+PRAGMA foreign_keys = ON;
+
+2025-01-17 15:33:57 [INFO] INSERT INTO prompts (prompt_id, …; rows affected: 1, rows returned: 0, elapsed: 19.708ms
+
+INSERT INTO
+  prompts (
+    prompt_id,
+    project_id,
+    prev_prompt_id,
+    content,
+    output
+  )
+VALUES
+  ($1, $2, $3, $4, $5)
+
+2025-01-17 15:33:57 [INFO] PRAGMA foreign_keys = ON; …; rows affected: 0, rows returned: 0, elapsed: 46.667µs
+
+PRAGMA foreign_keys = ON;
+
+2025-01-17 15:33:57 [INFO] SELECT * FROM scrolls …; rows affected: 0, rows returned: 1, elapsed: 679.993µs
+
+SELECT
+  *
+FROM
+  scrolls
+WHERE
+  project_id = $1;
+
+2025-01-17 15:33:57 [INFO] SELECT * FROM scrolls …; rows affected: 1, rows returned: 1, elapsed: 252.836µs
+
+SELECT
+  *
+FROM
+  scrolls
+WHERE
+  project_id = $1;
+
+2025-01-17 15:33:57 [INFO] SELECT * FROM prompts …; rows affected: 0, rows returned: 4, elapsed: 628.293µs
+
+SELECT
+  *
+FROM
+  prompts
+WHERE
+  project_id = $1;
+
+2025-01-17 15:39:46 [INFO] PRAGMA foreign_keys = ON; …; rows affected: 0, rows returned: 0, elapsed: 124.694µs
+
+PRAGMA foreign_keys = ON;
+
+2025-01-17 15:39:46 [INFO] Fetching all projects from the database
+2025-01-17 15:39:46 [INFO] SELECT * FROM projects;; rows affected: 0, rows returned: 1, elapsed: 512.960µs
+2025-01-17 15:39:51 [INFO] Stating item selection... 
+2025-01-17 15:39:52 [INFO] SELECT * FROM prompts …; rows affected: 0, rows returned: 4, elapsed: 826.818µs
+
+SELECT
+  *
+FROM
+  prompts
+WHERE
+  project_id = $1;
+
+2025-01-17 15:40:01 [INFO] Stating item selection... 
+2025-01-17 15:40:01 [INFO] SELECT * FROM scrolls …; rows affected: 0, rows returned: 1, elapsed: 547.961µs
+
+SELECT
+  *
+FROM
+  scrolls
+WHERE
+  project_id = $1;
+
+2025-01-17 15:40:01 [INFO] PRAGMA foreign_keys = ON; …; rows affected: 0, rows returned: 0, elapsed: 40.966µs
+
+PRAGMA foreign_keys = ON;
+
+2025-01-17 15:40:01 [INFO] SELECT * FROM scrolls …; rows affected: 0, rows returned: 1, elapsed: 796.382µs
+
+SELECT
+  *
+FROM
+  scrolls
+WHERE
+  project_id = $1;
+
+2025-01-17 15:40:01 [INFO] SELECT * FROM prompts …; rows affected: 0, rows returned: 4, elapsed: 251.340µs
+
+SELECT
+  *
+FROM
+  prompts
+WHERE
+  project_id = $1;
+
+2025-01-17 15:42:09 [INFO] SELECT * FROM scrolls …; rows affected: 0, rows returned: 1, elapsed: 263.079µs
+
+SELECT
+  *
+FROM
+  scrolls
+WHERE
+  project_id = $1;
+
+2025-01-17 15:42:09 [INFO] SELECT * FROM scrolls …; rows affected: 0, rows returned: 1, elapsed: 132.691µs
+
+SELECT
+  *
+FROM
+  scrolls
+WHERE
+  project_id = $1;
+
+2025-01-17 15:42:09 [INFO] SELECT * FROM prompts …; rows affected: 0, rows returned: 4, elapsed: 626.422µs
+
+SELECT
+  *
+FROM
+  prompts
+WHERE
+  project_id = $1;
+
+2025-01-17 15:42:27 [INFO] Storing prompt in the database
+2025-01-17 15:42:27 [INFO] INSERT INTO prompts (prompt_id, …; rows affected: 1, rows returned: 0, elapsed: 14.672ms
+
+INSERT INTO
+  prompts (
+    prompt_id,
+    project_id,
+    prev_prompt_id,
+    content,
+    output
+  )
+VALUES
+  ($1, $2, $3, $4, $5)
+
+2025-01-17 15:42:27 [INFO] SELECT * FROM scrolls …; rows affected: 0, rows returned: 1, elapsed: 243.612µs
+
+SELECT
+  *
+FROM
+  scrolls
+WHERE
+  project_id = $1;
+
+2025-01-17 15:42:27 [INFO] SELECT * FROM scrolls …; rows affected: 1, rows returned: 1, elapsed: 87.233µs
+
+SELECT
+  *
+FROM
+  scrolls
+WHERE
+  project_id = $1;
+
+2025-01-17 15:42:27 [INFO] SELECT * FROM prompts …; rows affected: 0, rows returned: 5, elapsed: 535.238µs
+
+SELECT
+  *
+FROM
+  prompts
+WHERE
+  project_id = $1;
+
+2025-01-17 15:43:45 [INFO] PRAGMA journal_mode = WAL; …; rows affected: 0, rows returned: 1, elapsed: 20.521ms
+
+PRAGMA journal_mode = WAL;
+PRAGMA foreign_keys = ON;
+
+2025-01-17 15:43:45 [INFO] PRAGMA foreign_keys = ON; …; rows affected: 0, rows returned: 0, elapsed: 33.540µs
+
+PRAGMA foreign_keys = ON;
+
+2025-01-17 15:43:45 [INFO] CREATE TABLE IF NOT …; rows affected: 0, rows returned: 0, elapsed: 11.873ms
+
+CREATE TABLE IF NOT EXISTS _sqlx_migrations (
+  version BIGINT PRIMARY KEY,
+  description TEXT NOT NULL,
+  installed_on TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  success BOOLEAN NOT NULL,
+  checksum BLOB NOT NULL,
+  execution_time BIGINT NOT NULL
+);
+
+2025-01-17 15:43:45 [INFO] SELECT version FROM _sqlx_migrations …; rows affected: 0, rows returned: 0, elapsed: 181.252µs
+
+SELECT
+  version
+FROM
+  _sqlx_migrations
+WHERE
+  success = false
+ORDER BY
+  version
+LIMIT
+  1
+
+2025-01-17 15:43:45 [INFO] SELECT version, checksum FROM …; rows affected: 0, rows returned: 0, elapsed: 160.533µs
+
+SELECT
+  version,
+  checksum
+FROM
+  _sqlx_migrations
+ORDER BY
+  version
+
+2025-01-17 15:43:45 [INFO] CREATE TABLE IF NOT …; rows affected: 0, rows returned: 0, elapsed: 1.052ms
+
+CREATE TABLE IF NOT EXISTS projects (
+  project_id TEXT PRIMARY KEY,
+  project_path TEXT
+);
+CREATE TABLE IF NOT EXISTS scrolls (
+  scroll_id TEXT PRIMARY KEY,
+  scroll_path TEXT,
+  content TEXT,
+  project_id TEXT
+);
+CREATE TABLE IF NOT EXISTS prompts (
+  prompt_id TEXT,
+  project_id TEXT,
+  content TEXT,
+  output TEXT,
+  prev_prompt_id TEXT
+);
+
+2025-01-17 15:43:45 [INFO] INSERT INTO _sqlx_migrations ( …; rows affected: 1, rows returned: 0, elapsed: 112.535µs
+
+INSERT INTO
+  _sqlx_migrations (
+    version,
+    description,
+    success,
+    checksum,
+    execution_time
+  )
+VALUES
+  (?1, ?2, TRUE, ?3, -1)
+
+2025-01-17 15:43:45 [INFO] UPDATE _sqlx_migrations SET execution_time …; rows affected: 1, rows returned: 0, elapsed: 3.601ms
+
+UPDATE
+  _sqlx_migrations
+SET
+  execution_time = ?1
+WHERE
+  version = ?2
+
+2025-01-17 15:43:45 [INFO] PRAGMA foreign_keys = ON; …; rows affected: 0, rows returned: 0, elapsed: 43.113µs
+
+PRAGMA foreign_keys = ON;
+
+2025-01-17 15:43:45 [INFO] Fetching all projects from the database
+2025-01-17 15:43:45 [INFO] SELECT * FROM projects;; rows affected: 0, rows returned: 0, elapsed: 574.029µs
+2025-01-17 15:43:47 [INFO] Fetching all projects from the database
+2025-01-17 15:43:47 [INFO] SELECT * FROM projects;; rows affected: 0, rows returned: 0, elapsed: 69.914µs
+2025-01-17 15:43:53 [INFO] PRAGMA foreign_keys = ON; …; rows affected: 0, rows returned: 0, elapsed: 49.699µs
+
+PRAGMA foreign_keys = ON;
+
+2025-01-17 15:43:53 [INFO] Fetching all projects from the database
+2025-01-17 15:43:53 [INFO] SELECT * FROM projects;; rows affected: 0, rows returned: 0, elapsed: 379.634µs
+2025-01-17 15:43:56 [INFO] Attempting to store a new project into the database
+2025-01-17 15:43:56 [INFO] INSERT INTO projects (project_id, …; rows affected: 1, rows returned: 0, elapsed: 14.220ms
+
+INSERT INTO
+  projects (project_id, project_path)
+VALUES
+  ($1, $2)
+
+2025-01-17 15:43:56 [INFO] Insert successfull of project: 137668c7-2440-4d23-92d4-d65457a2fc00
+2025-01-17 15:43:56 [INFO] PRAGMA foreign_keys = ON; …; rows affected: 0, rows returned: 0, elapsed: 70.846µs
+
+PRAGMA foreign_keys = ON;
+
+2025-01-17 15:43:56 [INFO] SELECT * FROM scrolls …; rows affected: 0, rows returned: 0, elapsed: 652.603µs
+
+SELECT
+  *
+FROM
+  scrolls
+WHERE
+  project_id = $1;
+
+2025-01-17 15:44:03 [INFO] Attempting to store a scroll in the database
+2025-01-17 15:44:03 [INFO] INSERT INTO scrolls (scroll_id, …; rows affected: 1, rows returned: 0, elapsed: 11.042ms
+
+INSERT INTO
+  scrolls (scroll_id, scroll_path, content, project_id)
+VALUES
+  ($1, $2, $3, $4)
+
+2025-01-17 15:44:03 [INFO] SELECT * FROM scrolls …; rows affected: 0, rows returned: 1, elapsed: 295.888µs
+
+SELECT
+  *
+FROM
+  scrolls
+WHERE
+  project_id = $1;
+
+2025-01-17 15:44:03 [INFO] SELECT * FROM scrolls …; rows affected: 1, rows returned: 1, elapsed: 364.450µs
+
+SELECT
+  *
+FROM
+  scrolls
+WHERE
+  project_id = $1;
+
+2025-01-17 15:44:09 [INFO] Attempting to store a scroll in the database
+2025-01-17 15:44:09 [INFO] INSERT INTO scrolls (scroll_id, …; rows affected: 1, rows returned: 0, elapsed: 10.812ms
+
+INSERT INTO
+  scrolls (scroll_id, scroll_path, content, project_id)
+VALUES
+  ($1, $2, $3, $4)
+
+2025-01-17 15:44:09 [INFO] SELECT * FROM scrolls …; rows affected: 1, rows returned: 2, elapsed: 217.759µs
+
+SELECT
+  *
+FROM
+  scrolls
+WHERE
+  project_id = $1;
+
+2025-01-17 15:44:09 [INFO] SELECT * FROM scrolls …; rows affected: 1, rows returned: 2, elapsed: 204.863µs
+
+SELECT
+  *
+FROM
+  scrolls
+WHERE
+  project_id = $1;
+
+2025-01-17 15:44:12 [INFO] SELECT * FROM prompts …; rows affected: 1, rows returned: 0, elapsed: 226.850µs
+
+SELECT
+  *
+FROM
+  prompts
+WHERE
+  project_id = $1;
+
+2025-01-17 15:44:15 [INFO] SELECT * FROM prompts …; rows affected: 1, rows returned: 0, elapsed: 253.022µs
+
+SELECT
+  *
+FROM
+  prompts
+WHERE
+  project_id = $1;
+
+2025-01-17 15:44:15 [INFO] SELECT * FROM prompts …; rows affected: 1, rows returned: 0, elapsed: 53.973µs
+
+SELECT
+  *
+FROM
+  prompts
+WHERE
+  project_id = $1;
+
+2025-01-17 15:44:23 [INFO] PRAGMA foreign_keys = ON; …; rows affected: 0, rows returned: 0, elapsed: 251.825µs
+
+PRAGMA foreign_keys = ON;
+
+2025-01-17 15:44:23 [INFO] Fetching all projects from the database
+2025-01-17 15:44:23 [INFO] SELECT * FROM projects;; rows affected: 0, rows returned: 1, elapsed: 625.526µs
+2025-01-17 15:44:25 [INFO] Stating item selection... 
+2025-01-17 15:44:25 [INFO] SELECT * FROM prompts …; rows affected: 0, rows returned: 0, elapsed: 313.814µs
+
+SELECT
+  *
+FROM
+  prompts
+WHERE
+  project_id = $1;
+
+2025-01-17 15:44:27 [INFO] SELECT * FROM prompts …; rows affected: 0, rows returned: 0, elapsed: 79.603µs
+
+SELECT
+  *
+FROM
+  prompts
+WHERE
+  project_id = $1;
+
+2025-01-17 15:44:27 [INFO] SELECT * FROM prompts …; rows affected: 0, rows returned: 0, elapsed: 56.221µs
+
+SELECT
+  *
+FROM
+  prompts
+WHERE
+  project_id = $1;
+
+2025-01-17 15:44:33 [INFO] PRAGMA foreign_keys = ON; …; rows affected: 0, rows returned: 0, elapsed: 53.011µs
+
+PRAGMA foreign_keys = ON;
+
+2025-01-17 15:44:33 [INFO] Fetching all projects from the database
+2025-01-17 15:44:33 [INFO] SELECT * FROM projects;; rows affected: 0, rows returned: 1, elapsed: 544.441µs
+2025-01-17 15:44:35 [INFO] Stating item selection... 
+2025-01-17 15:44:36 [INFO] SELECT * FROM prompts …; rows affected: 0, rows returned: 0, elapsed: 260.109µs
+
+SELECT
+  *
+FROM
+  prompts
+WHERE
+  project_id = $1;
+
+2025-01-17 15:44:38 [INFO] SELECT * FROM prompts …; rows affected: 0, rows returned: 0, elapsed: 77.610µs
+
+SELECT
+  *
+FROM
+  prompts
+WHERE
+  project_id = $1;
+
+2025-01-17 15:49:43 [INFO] PRAGMA foreign_keys = ON; …; rows affected: 0, rows returned: 0, elapsed: 51.775µs
+
+PRAGMA foreign_keys = ON;
+
+2025-01-17 15:49:43 [INFO] Fetching all projects from the database
+2025-01-17 15:49:43 [INFO] SELECT * FROM projects;; rows affected: 0, rows returned: 1, elapsed: 557.506µs
+2025-01-17 15:49:43 [INFO] Fetching all projects from the database
+2025-01-17 15:49:43 [INFO] PRAGMA foreign_keys = ON; …; rows affected: 0, rows returned: 0, elapsed: 10.405µs
+
+PRAGMA foreign_keys = ON;
+
+2025-01-17 15:49:43 [INFO] SELECT * FROM projects;; rows affected: 0, rows returned: 1, elapsed: 142.027µs
+2025-01-17 15:49:46 [INFO] Stating item selection... 
+2025-01-17 15:49:47 [INFO] SELECT * FROM prompts …; rows affected: 0, rows returned: 0, elapsed: 288.685µs
+
+SELECT
+  *
+FROM
+  prompts
+WHERE
+  project_id = $1;
+
+2025-01-17 15:49:47 [INFO] SELECT * FROM scrolls …; rows affected: 0, rows returned: 2, elapsed: 533.305µs
+
+SELECT
+  *
+FROM
+  scrolls
+WHERE
+  project_id = $1;
+
+2025-01-17 15:49:47 [INFO] SELECT * FROM scrolls …; rows affected: 0, rows returned: 2, elapsed: 561.921µs
+
+SELECT
+  *
+FROM
+  scrolls
+WHERE
+  project_id = $1;
+
+2025-01-17 15:49:53 [INFO] PRAGMA journal_mode = WAL; …; rows affected: 0, rows returned: 1, elapsed: 26.440ms
+
+PRAGMA journal_mode = WAL;
+PRAGMA foreign_keys = ON;
+
+2025-01-17 15:49:53 [INFO] PRAGMA foreign_keys = ON; …; rows affected: 0, rows returned: 0, elapsed: 32.562µs
+
+PRAGMA foreign_keys = ON;
+
+2025-01-17 15:49:54 [INFO] CREATE TABLE IF NOT …; rows affected: 0, rows returned: 0, elapsed: 18.062ms
+
+CREATE TABLE IF NOT EXISTS _sqlx_migrations (
+  version BIGINT PRIMARY KEY,
+  description TEXT NOT NULL,
+  installed_on TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  success BOOLEAN NOT NULL,
+  checksum BLOB NOT NULL,
+  execution_time BIGINT NOT NULL
+);
+
+2025-01-17 15:49:54 [INFO] SELECT version FROM _sqlx_migrations …; rows affected: 0, rows returned: 0, elapsed: 479.359µs
+
+SELECT
+  version
+FROM
+  _sqlx_migrations
+WHERE
+  success = false
+ORDER BY
+  version
+LIMIT
+  1
+
+2025-01-17 15:49:54 [INFO] SELECT version, checksum FROM …; rows affected: 0, rows returned: 0, elapsed: 301.392µs
+
+SELECT
+  version,
+  checksum
+FROM
+  _sqlx_migrations
+ORDER BY
+  version
+
+2025-01-17 15:49:54 [INFO] CREATE TABLE IF NOT …; rows affected: 0, rows returned: 0, elapsed: 1.353ms
+
+CREATE TABLE IF NOT EXISTS projects (
+  project_id TEXT PRIMARY KEY,
+  project_path TEXT
+);
+CREATE TABLE IF NOT EXISTS scrolls (
+  scroll_id TEXT PRIMARY KEY,
+  scroll_path TEXT,
+  content TEXT,
+  project_id TEXT
+);
+CREATE TABLE IF NOT EXISTS prompts (
+  prompt_id TEXT,
+  project_id TEXT,
+  content TEXT,
+  output TEXT,
+  prev_prompt_id TEXT
+);
+
+2025-01-17 15:49:54 [INFO] INSERT INTO _sqlx_migrations ( …; rows affected: 1, rows returned: 0, elapsed: 185.308µs
+
+INSERT INTO
+  _sqlx_migrations (
+    version,
+    description,
+    success,
+    checksum,
+    execution_time
+  )
+VALUES
+  (?1, ?2, TRUE, ?3, -1)
+
+2025-01-17 15:49:54 [INFO] UPDATE _sqlx_migrations SET execution_time …; rows affected: 1, rows returned: 0, elapsed: 3.383ms
+
+UPDATE
+  _sqlx_migrations
+SET
+  execution_time = ?1
+WHERE
+  version = ?2
+
+2025-01-17 15:49:54 [INFO] PRAGMA foreign_keys = ON; …; rows affected: 0, rows returned: 0, elapsed: 50.042µs
+
+PRAGMA foreign_keys = ON;
+
+2025-01-17 15:49:54 [INFO] Fetching all projects from the database
+2025-01-17 15:49:54 [INFO] SELECT * FROM projects;; rows affected: 0, rows returned: 0, elapsed: 594.310µs
+2025-01-17 15:49:54 [INFO] Fetching all projects from the database
+2025-01-17 15:49:54 [INFO] PRAGMA foreign_keys = ON; …; rows affected: 0, rows returned: 0, elapsed: 43.616µs
+
+PRAGMA foreign_keys = ON;
+
+2025-01-17 15:49:54 [INFO] SELECT * FROM projects;; rows affected: 0, rows returned: 0, elapsed: 545.247µs
+2025-01-17 15:50:00 [INFO] PRAGMA foreign_keys = ON; …; rows affected: 0, rows returned: 0, elapsed: 44.419µs
+
+PRAGMA foreign_keys = ON;
+
+2025-01-17 15:50:00 [INFO] Fetching all projects from the database
+2025-01-17 15:50:00 [INFO] SELECT * FROM projects;; rows affected: 0, rows returned: 0, elapsed: 452.213µs
+2025-01-17 15:50:00 [INFO] Fetching all projects from the database
+2025-01-17 15:50:00 [INFO] PRAGMA foreign_keys = ON; …; rows affected: 0, rows returned: 0, elapsed: 9.677µs
+
+PRAGMA foreign_keys = ON;
+
+2025-01-17 15:50:00 [INFO] SELECT * FROM projects;; rows affected: 0, rows returned: 0, elapsed: 159.364µs
+2025-01-17 15:51:13 [INFO] PRAGMA foreign_keys = ON; …; rows affected: 0, rows returned: 0, elapsed: 57.373µs
+
+PRAGMA foreign_keys = ON;
+
+2025-01-17 15:51:13 [INFO] Fetching all projects from the database
+2025-01-17 15:51:13 [INFO] SELECT * FROM projects;; rows affected: 0, rows returned: 0, elapsed: 526.795µs
+2025-01-17 15:51:13 [INFO] Fetching all projects from the database
+2025-01-17 15:51:13 [INFO] PRAGMA foreign_keys = ON; …; rows affected: 0, rows returned: 0, elapsed: 14.829µs
+
+PRAGMA foreign_keys = ON;
+
+2025-01-17 15:51:13 [INFO] SELECT * FROM projects;; rows affected: 0, rows returned: 0, elapsed: 238.620µs
+2025-01-17 15:51:16 [INFO] Creating a new project...
+2025-01-17 15:51:18 [INFO] Attempting to store a new project into the database
+2025-01-17 15:51:18 [INFO] INSERT INTO projects (project_id, …; rows affected: 1, rows returned: 0, elapsed: 10.810ms
+
+INSERT INTO
+  projects (project_id, project_path)
+VALUES
+  ($1, $2)
+
+2025-01-17 15:51:18 [INFO] Insert successfull of project: e20796d1-02db-4a50-8bc4-28fe03587b14
+2025-01-17 15:51:18 [INFO] SELECT * FROM scrolls …; rows affected: 0, rows returned: 0, elapsed: 258.275µs
+
+SELECT
+  *
+FROM
+  scrolls
+WHERE
+  project_id = $1;
+
