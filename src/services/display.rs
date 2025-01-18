@@ -1,8 +1,6 @@
 use ratatui::text::Line;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
-use std::any::type_name;
-
-use crate::utils::structs::{Project, Prompt};
+use crate::utils::structs::Project;
 
 #[derive(Clone, Copy)]
 pub enum AppState {

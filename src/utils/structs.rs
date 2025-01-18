@@ -1,13 +1,6 @@
 use sqlx::FromRow;
 use uuid::Uuid;
 
-pub enum AppState {
-    SelectProject,
-    SelectPrompt,
-    AskModel,
-    EditScrolls,
-}
-
 #[derive(Clone, FromRow, Debug)]
 pub struct Project {
     pub project_id: String,

@@ -9,8 +9,6 @@ use nucleo_picker::{
     render::StrRenderer
 };
 
-use crate::utils::logger::log_info;
-
 pub struct DirEntryRender;
 
 impl Render<DirEntry> for DirEntryRender {
@@ -60,7 +58,6 @@ pub fn select_files(dir_path: Option<&str>) -> Result<String> {
 }
 
 pub fn item_selector(items: Vec<String>) -> Result<Option<String>> {
-    log_info("Stating item selection... ");
     let mut picker = PickerOptions::default()
         // set the configuration to match 'path-like' objects
         .config(Config::DEFAULT.match_paths())
