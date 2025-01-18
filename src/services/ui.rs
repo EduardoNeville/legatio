@@ -59,9 +59,11 @@ pub fn usr_prompt_chain(prompts: &[Prompt]) -> Vec<String>{
     let mut str_items: Vec<String> = Vec::new();
     for p in prompts.iter() {
         let (p_str, o_str) = format_prompt(p);
-        str_items.push(p_str);
+        // Reverse order for fst at top
         str_items.push(o_str);
+        str_items.push(p_str);
     };
+    str_items.reverse();
     return str_items
 }
 

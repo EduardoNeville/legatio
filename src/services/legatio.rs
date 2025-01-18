@@ -9,6 +9,7 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode},
 };
 
+use std::fs::File;
 use std::time::Duration;
 use std::{
     fs::{self, OpenOptions},
@@ -19,6 +20,8 @@ use std::{io, vec};
 use std::io::prelude::*;
 
 use sqlx::{Result, SqlitePool};
+use crate::utils::logger::log_info;
+use crate::utils::prompt_utils::prompt_chain;
 use crate::{
     db::{
         project::{delete_project, get_projects, store_project},
@@ -28,7 +31,7 @@ use crate::{
     services::{
         model::get_openai_response, 
         search::{item_selector, select_files}, 
-        ui::{usr_scrolls, usr_prompts},
+        ui::{usr_scrolls, usr_prompts, usr_prompt_chain},
         display::{
             build_select_project,
             format_project_title,
@@ -101,6 +104,7 @@ impl Legatio {
         pool: &SqlitePool,
     ) -> Result<()> {
         // Prepare all the data we might need to render
+        //
         let top_title = format_project_title(&self.current_project);
         let top_text: Vec<Line>;
         let mut scroll_title: Option<&str> = None;
@@ -127,7 +131,8 @@ impl Legatio {
                 top_text = vec![
                     Line::from("[s]: Select Prompt"),
                     Line::from("[d]: Delete Prompt"),
-                    Line::from("[c]: Change Project"),
+                    Line::from("[p]: Change Project"),
+                    Line::from("[q]: Quit"),
                 ];
 
                 if let Some(project) = &self.current_project {
@@ -146,6 +151,7 @@ impl Legatio {
                         for p in prompt_strs {
                             bot_items.push(Line::from(p));
                         }
+
                     }
                 } else {
                     bot_items.push(Line::from("No active project"));
@@ -156,11 +162,12 @@ impl Legatio {
                     Line::from("[a] Ask the Model"),
                     Line::from("[b] Switch branch"),
                     Line::from("[e] Edit Scrolls"),
-                    Line::from("[c] Change Project"),
+                    Line::from("[p] Change Project"),
                 ];
                 scroll_title = Some("[ Scrolls ]");
-
+                bot_title = String::from("[ Prompts ]");
                 if let Some(project) = &self.current_project {
+                    // Scroll PREP
                     let scrolls = usr_scrolls(pool, project).await.unwrap();
                     // Initialize `scroll_items` if it hasn't been initialized
                     if scroll_items.is_none() {
@@ -173,6 +180,44 @@ impl Legatio {
                             items.push(Line::from(scroll)); // Mutable push happens here
                         }
                     }
+
+                    // Prompt PREP
+                    let prompt = self.current_prompt.as_ref();
+                    let file_prompt = fs::read_to_string(
+                        &PathBuf::from(
+                            &self.current_project.as_ref().unwrap().project_path
+                        ).join("legatio.md")                                   
+                    );
+
+                    let mut prompts: Option<Vec<Prompt>> = None;
+                    let mut pmp_chain: Option<Vec<Prompt>> = None;
+                    if !file_prompt.is_ok() {
+                        File::create(
+                            &PathBuf::from(
+                                &self.current_project.as_ref().unwrap().project_path
+                            ).join("legatio.md")
+                        ).expect("Could not create file!");
+                    } else if prompt.is_some() {
+                        prompts = Some(get_prompts(
+                            pool,
+                            &project.project_id
+                        ).await.unwrap());
+
+                        if prompts.as_ref().unwrap().is_empty() {
+                            bot_items.push(Line::from("This project has no prompts!"));
+                        } else {
+                            pmp_chain = Some(prompt_chain(
+                                prompts.as_ref().unwrap().as_ref(),
+                                &self.current_prompt.as_ref().unwrap()
+                            ));
+
+                            let p_strs = usr_prompt_chain(pmp_chain.as_ref().unwrap().as_ref());
+                            p_strs.iter().for_each(|p| bot_items.push(Line::from(p.to_string())));
+                        }
+                    }
+
+                } else {
+                    bot_items.push(Line::from("No active project"));
                 }
             }
             AppState::EditScrolls => {
@@ -180,16 +225,22 @@ impl Legatio {
                     Line::from("[n] New Scroll"),
                     Line::from("[d] Delete Scroll"),
                     Line::from("[s] Select Prompt"),
-                    Line::from("[c] Change Project"),
+                    Line::from("[p] Change Project"),
                 ];
                 bot_title = "[ Scrolls ]".to_string();
 
                 if let Some(project) = &self.current_project {
+                    let project_name = project
+                        .project_path
+                        .split('/')
+                        .last()
+                        .unwrap_or("[Unnamed Project]");
                     let scrolls = get_scrolls(pool, &project.project_id)
                         .await
                         .unwrap_or_default();
-                    for scroll in scrolls {
-                        bot_items.push(Line::from(scroll.scroll_path.clone()))
+                    for scroll in scrolls.iter() {
+                        let scroll_name = scroll.scroll_path.split(project_name).last().unwrap().to_string();
+                        bot_items.push(Line::from(scroll_name))
                     }
                 }
             }
@@ -346,21 +397,38 @@ impl Legatio {
                 if let Some(project) = &self.current_project {
                     let prompts = get_prompts(pool, &project.project_id).await.unwrap();
                     if !prompts.is_empty() {
-                        let mut concat_prompts = Vec::new();
+                        let project_name = project
+                            .project_path
+                            .split('/')
+                            .last()
+                            .unwrap_or("[Unnamed Project]");
+                        let mut concat_prompts = vec![format!(" -[ {} -:- Unchained]-", project_name)];
                         for p in prompts.iter() {
                             let (p_str, o_str) = format_prompt(&p);
                             concat_prompts.push(format!("{}\n{}", p_str, o_str));
                         }
+                        concat_prompts.reverse();
 
                         disable_raw_mode()?;
                         if let Some(selected_prompt) = item_selector(concat_prompts.clone()).unwrap() {
                             enable_raw_mode()?;
-                            let index = concat_prompts
+                            let mut idx = concat_prompts
                                 .iter()
                                 .position(|p| p == &selected_prompt)
                                 .unwrap();
-                            self.current_prompt = Some(prompts[index].clone());
-                            return Ok(AppState::AskModel);
+
+                            log_info(&format!("Selected: {:?} | idx: {} | len: {}", selected_prompt, idx, prompts.len()));
+
+                            if idx < prompts.len() {
+                                idx = prompts.len() - 1 - idx;
+                                self.current_prompt = match prompts.get(idx) {
+                                    Some(p) => Some(p.to_owned()),
+                                    _ => None,
+                                };
+                            } else {
+                                self.current_prompt = None;
+                            }
+
                         }
                     }
                     return Ok(AppState::AskModel);
@@ -369,7 +437,15 @@ impl Legatio {
             InputEvent::Delete => {
                 if let Some(project) = &self.current_project {
                     let prompts = get_prompts(pool, &project.project_id).await.unwrap();
-                    let mut concat_prompts = Vec::new();
+                    let project_name = project
+                        .project_path
+                        .split('/')
+                        .last()
+                        .unwrap_or("[Unnamed Project]");
+
+                    let mut concat_prompts = vec![
+                        format!(" -[ {} -:- Unchained]-", project_name)
+                    ];
                     for p in prompts.iter() {
                         let (p_str, o_str) = format_prompt(&p);
                         concat_prompts.push(format!("{}\n{}", p_str, o_str));
@@ -389,6 +465,11 @@ impl Legatio {
             }
             InputEvent::ChangeProject => {
                 return Ok(AppState::SelectProject);
+            }
+            InputEvent::Quit => {
+                //TODO handle store appstate
+                disable_raw_mode()?;
+                std::process::exit(0);
             }
             _ => {}
         }

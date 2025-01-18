@@ -51,7 +51,7 @@ impl From<KeyEvent> for InputEvent {
                 state: _,
             } => InputEvent::SwitchBranch,
             KeyEvent {
-                code: KeyCode::Char('c'),
+                code: KeyCode::Char('p'),
                 modifiers: KeyModifiers::NONE,
                 kind: _,
                 state: _,

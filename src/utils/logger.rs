@@ -34,8 +34,8 @@ fn current_timestamp() -> String {
 
 /// Logs a message to the log file with the given level (e.g., "INFO" or "ERROR").
 fn log_message(level: &str, message: &str) {
-    let timestamp = current_timestamp();
-    let log_message = format!("{} [{}] {}\n", timestamp, level, message);
+    //let timestamp = current_timestamp();
+    let log_message = format!("[{}] {}\n", level, message);
 
     // Access the global LOG_FILE and write to it
     unsafe {
