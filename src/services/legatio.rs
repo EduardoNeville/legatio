@@ -2,7 +2,7 @@ use crossterm::event::KeyEvent;
 use ratatui::text::Line;
 use ratatui::{backend::CrosstermBackend, Terminal};
 use ratatui::layout::{Constraint, Direction, Layout};
-use ratatui::widgets::{Block, Borders, Paragraph};
+use ratatui::widgets::{Block, BorderType, Borders, Paragraph};
 use ratatui::style::{Style, Color};
 use crossterm::{
     event::{self, Event},
@@ -263,14 +263,14 @@ impl Legatio {
     ) -> Result<()> {
         // Top box
         let top_box = Paragraph::new(top_text.clone())
-            .block(Block::default().borders(Borders::ALL).title(top_title))
-            .style(Style::default().fg(Color::Green));
+            .block(Block::default().borders(Borders::ALL).border_type(BorderType::Thick).title(top_title))
+            .style(Style::default().fg(Color::LightBlue));
 
         // Scroll box
         let (scroll_box, constraints) = if let (Some(title), Some(text)) = (scroll_title, scroll_text.as_ref()) {
             // Both `scroll_title` and `scroll_text` exist, so create the scroll box
             let scroll_box = Paragraph::new(text.clone())
-                .block(Block::default().borders(Borders::ALL).title(title))
+                .block(Block::default().borders(Borders::ALL).border_type(BorderType::Thick).title(title))
                 .style(Style::default().fg(Color::LightBlue));
 
             let constraints = Vec::from([
@@ -290,7 +290,7 @@ impl Legatio {
 
         // Bottom box
         let bot_box = Paragraph::new(bot_items.clone())
-            .block(Block::default().borders(Borders::ALL).title(bot_title))
+            .block(Block::default().borders(Borders::ALL).border_type(BorderType::Thick).title(bot_title))
             .style(Style::default().fg(Color::LightBlue));
 
         // Terminal draw
