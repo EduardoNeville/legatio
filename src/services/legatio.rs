@@ -230,17 +230,15 @@ impl Legatio {
                 bot_title = "[ Scrolls ]".to_string();
 
                 if let Some(project) = &self.current_project {
-                    let project_name = project
-                        .project_path
-                        .split('/')
-                        .last()
-                        .unwrap_or("[Unnamed Project]");
                     let scrolls = get_scrolls(pool, &project.project_id)
                         .await
                         .unwrap_or_default();
                     for scroll in scrolls.iter() {
-                        let scroll_name = scroll.scroll_path.split(project_name).last().unwrap().to_string();
-                        bot_items.push(Line::from(scroll_name))
+                        let scroll_name = match scroll.scroll_path.strip_prefix(&project.project_path) {
+                            Some(remaining) => remaining.strip_prefix('/').unwrap_or(remaining).to_string(),
+                            None => scroll.scroll_path.to_string(),
+                        };
+                        bot_items.push(Line::from(scroll_name));
                     }
                 }
             }
@@ -340,12 +338,13 @@ impl Legatio {
                 let projects = get_projects(pool).await.unwrap();
                 if !projects.is_empty() {
                     let (_, str_names) = build_select_project(&projects);
-                    disable_raw_mode()?;
                     if let Some(selected_project) = item_selector(str_names.clone()).unwrap() {
-                        enable_raw_mode()?;
                         let sel_idx = str_names.iter().position(|p| *p == selected_project).unwrap();
                         self.current_project = Some(projects[sel_idx].clone());
                         return Ok(AppState::SelectPrompt);
+                    } else {
+                        enable_raw_mode()?;
+                        return Ok(AppState::SelectProject);
                     }
                 } else {
                     let selected_dir = select_files(None).unwrap();
@@ -366,13 +365,13 @@ impl Legatio {
                 let projects = get_projects(pool).await.unwrap();
                 if !projects.is_empty() {
                     let (_, str_names) = build_select_project(&projects);
-                    disable_raw_mode()?;
                     if let Some(selected_project) = item_selector(str_names.clone()).unwrap() {
-                        enable_raw_mode()?;
                         let sel_idx = str_names.iter().position(|p| *p == selected_project).unwrap();
                         delete_project(pool, &projects[sel_idx].project_id)
                             .await
                             .unwrap();
+                    } else {
+                        return Ok(AppState::SelectProject);
                     }
                 }
                 return Ok(AppState::SelectProject);
@@ -409,9 +408,7 @@ impl Legatio {
                         }
                         concat_prompts.reverse();
 
-                        disable_raw_mode()?;
                         if let Some(selected_prompt) = item_selector(concat_prompts.clone()).unwrap() {
-                            enable_raw_mode()?;
                             let mut idx = concat_prompts
                                 .iter()
                                 .position(|p| p == &selected_prompt)
@@ -428,8 +425,10 @@ impl Legatio {
                             } else {
                                 self.current_prompt = None;
                             }
-
-                        }
+                        } else {
+                            enable_raw_mode()?;
+                            return Ok(AppState::SelectPrompt);
+                    }
                     }
                     return Ok(AppState::AskModel);
                 }
@@ -451,14 +450,14 @@ impl Legatio {
                         concat_prompts.push(format!("{}\n{}", p_str, o_str));
                     }
 
-                    disable_raw_mode()?;
                     if let Some(selected_prompt) = item_selector(concat_prompts.clone()).unwrap() {
-                        enable_raw_mode()?;
                         let index = concat_prompts
                             .iter()
                             .position(|p| p == &selected_prompt)
                             .unwrap();
                         delete_prompt(pool, &prompts[index]).await.unwrap();
+                    } else {
+                        return Ok(AppState::SelectPrompt);
                     }
                 }
                 return Ok(AppState::SelectPrompt);
@@ -543,7 +542,9 @@ impl Legatio {
         match InputEvent::from(key_event) {
             InputEvent::New => {
                 if let Some(project) = &self.current_project {
+                    disable_raw_mode()?;
                     let selected_scrolls = select_files(Some(&project.project_path)).unwrap();
+                    enable_raw_mode()?;
                     let new_scroll = read_file(&selected_scrolls, &project.project_id).unwrap();
                     store_scroll(pool, &new_scroll).await.unwrap();
                 }
@@ -564,6 +565,9 @@ impl Legatio {
                         delete_scroll(pool, &scrolls[index].scroll_id)
                             .await
                             .unwrap();
+                    } else {
+                        enable_raw_mode()?;
+                        return Ok(AppState::EditScrolls);
                     }
                 }
                 return Ok(AppState::EditScrolls);

@@ -1,6 +1,7 @@
 use std::{borrow::Cow, path::PathBuf, thread::spawn};
 
 use std::io::Result;
+use crossterm::terminal::{disable_raw_mode, enable_raw_mode};
 use ignore::{DirEntry, WalkBuilder, WalkState};
 use nucleo_picker::{
     nucleo::Config,
@@ -21,6 +22,7 @@ impl Render<DirEntry> for DirEntryRender {
 }
 
 pub fn select_files(dir_path: Option<&str>) -> Result<String> {
+    disable_raw_mode()?;
     let mut picker = PickerOptions::default()
         // See the nucleo configuration for more options:
         //   https://docs.rs/nucleo/latest/nucleo/struct.Config.html
@@ -54,10 +56,12 @@ pub fn select_files(dir_path: Option<&str>) -> Result<String> {
         None => None,
     };
 
+    enable_raw_mode()?;
     Ok(file.unwrap())
 }
 
 pub fn item_selector(items: Vec<String>) -> Result<Option<String>> {
+    disable_raw_mode()?;
     let mut picker = PickerOptions::default()
         // set the configuration to match 'path-like' objects
         .config(Config::DEFAULT.match_paths())
@@ -75,6 +79,7 @@ pub fn item_selector(items: Vec<String>) -> Result<Option<String>> {
         None => None,
     };
 
+    enable_raw_mode()?;
     Ok(sel_item)
 }
 
