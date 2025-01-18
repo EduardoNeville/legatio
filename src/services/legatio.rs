@@ -28,16 +28,20 @@ use crate::{
     services::{
         model::get_openai_response, 
         search::{item_selector, select_files}, 
-        ui::usr_scrolls,
-        display::AppState
+        ui::{usr_scrolls, usr_prompts},
+        display::{
+            build_select_project,
+            format_project_title,
+            InputEvent,
+            AppState
+        }
     },
     utils::{
-        file_utils::read_file, prompt_utils::{format_prompt, system_prompt}, structs::{Project, Prompt}
+        file_utils::read_file, 
+        prompt_utils::{format_prompt, system_prompt},
+        structs::{Project, Prompt}
     }
 };
-
-use super::display::{build_select_project, format_project_title, InputEvent};
-use super::ui::usr_prompts;
 
 pub struct Legatio {
     state: AppState,
@@ -88,33 +92,6 @@ impl Legatio {
             let next_state = self.handle_input(pool).await?;
             self.state = next_state;
 
-            //let current_state = &self.state; // Clone the state to avoid borrowing issues
-            //match current_state {
-            //    AppState::SelectProject => {
-            //        self.state = self.handle_select_project(
-            //            terminal,
-            //            pool
-            //        ).await.unwrap();
-            //    }
-            //    AppState::SelectPrompt => {
-            //        self.state = self.handle_select_prompt(
-            //            terminal,
-            //            pool
-            //        ).await.unwrap();
-            //    }
-            //    AppState::AskModel => {
-            //        self.state = self.handle_ask_model(
-            //            terminal,
-            //            pool
-            //        ).await.unwrap();
-            //    }
-            //    AppState::EditScrolls => {
-            //        self.state = self.handle_edit_scrolls(
-            //            terminal,
-            //            pool
-            //        ).await.unwrap();
-            //    }
-            //}
         }
     }
 
@@ -520,5 +497,4 @@ impl Legatio {
         }
         Ok(AppState::EditScrolls)
     }
-    
 }
