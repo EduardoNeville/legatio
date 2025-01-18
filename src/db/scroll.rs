@@ -7,8 +7,6 @@ use crate::utils::logger::{log_info, log_error};
 
 /// Inserts a scroll into the database.
 pub async fn store_scroll(pool: &SqlitePool, scroll: &Scroll) -> Result<()> {
-    log_info("Attempting to store a scroll in the database");
-
     if let Err(error) = sqlx::query(
         "INSERT INTO scrolls (scroll_id, scroll_path, content, project_id) VALUES ($1, $2, $3, $4)")
         .bind(&scroll.scroll_id)
@@ -18,7 +16,9 @@ pub async fn store_scroll(pool: &SqlitePool, scroll: &Scroll) -> Result<()> {
         .execute(pool)
         .await
     {
-        log_error(&format!("Failed to insert scroll: {}", error));
+        log_error(&format!("FAILED :: INSERT scroll_id: [{}]", 
+            scroll.scroll_id,
+        ));
         return Err(error.into());
     }
 

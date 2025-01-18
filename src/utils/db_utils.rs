@@ -4,9 +4,8 @@ use crate::utils::logger::{log_info, log_error};
 
 pub async fn get_db_pool(db_url: &str) -> Result<SqlitePool> {
     if !Sqlite::database_exists(db_url).await.unwrap_or(false) {
-        println!("Creating database {}", db_url);
         match Sqlite::create_database(db_url).await {
-            Ok(_) => println!("Create db success"),
+            Ok(_) => log_info("Create db success"),
             Err(error) => panic!("error: {}", error),
         }
 
@@ -19,15 +18,13 @@ pub async fn get_db_pool(db_url: &str) -> Result<SqlitePool> {
             .run(&db)
             .await;
         match migration_results {
-            Ok(_) => println!("Migration success"),
+            Ok(_) => log_info("Migration success"),
             Err(error) => {
                 panic!("error: {}", error);
             }
         }
-        println!("migration: {:?}", migration_results);
-    } else {
-        println!("Database already exists");
-    }
+    } 
+    
     let db = SqlitePool::connect(db_url).await.unwrap();
     Ok(db)
 }
@@ -47,16 +44,11 @@ pub async fn delete_module(
         .execute(pool)
         .await
     {
-        log_error(&format!(
-            "FAILED :: DELETE from {} where {} = {}",
-            table, column_name, column_value
+        log_error(&format!("FAILED :: DELETE {}: [{}]", 
+            column_name,
+            column_value
         ));
         return Err(error.into());
     }
-
-    log_info(&format!(
-        "SUCCESSFUL :: DELETE from {} where {} = {}",
-        table, column_name, column_value
-    ));
     Ok(())
 }

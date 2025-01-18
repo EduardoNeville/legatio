@@ -2,11 +2,10 @@ use sqlx::sqlite::SqlitePool;
 use anyhow::Result;
 use crate::utils::db_utils::delete_module;
 use crate::utils::structs::Project;
-use crate::utils::logger::{log_info, log_error};
+use crate::utils::logger::log_error;
 
 /// Inserts a project into the database.
 pub async fn store_project(pool: &SqlitePool, project: &Project) -> Result<()> {
-    log_info("Attempting to store a new project into the database");
 
     if let Err(error) = sqlx::query("INSERT INTO projects (project_id, project_path) VALUES ($1, $2)")
         .bind(&project.project_id)
@@ -14,17 +13,17 @@ pub async fn store_project(pool: &SqlitePool, project: &Project) -> Result<()> {
         .execute(pool)
         .await
     {
-        log_error(&format!("Failed to insert project: {}", error));
+        log_error(&format!("FAILED :: INSERT project_id: [{}]", 
+            project.project_id,
+        ));
         return Err(error.into());
     }
 
-    log_info(&format!("Insert successfull of project: {}", project.project_id));
     Ok(())
 }
 
 /// Fetches all projects from the database.
 pub async fn get_projects(pool: &SqlitePool) -> Result<Vec<Project>> {
-    log_info("Fetching all projects from the database");
 
     let result = sqlx::query_as::<_, Project>("SELECT * FROM projects;")
         .fetch_all(pool)
@@ -44,7 +43,6 @@ pub async fn delete_project(pool: &SqlitePool, project_id: &str) -> Result<()> {
     delete_module(pool, &"projects", &col_name, project_id)
         .await
         .expect("Error in project deletion");
-
     
     delete_module(pool, &"prompts", &col_name, project_id)
         .await

@@ -1,18 +1,10 @@
-use std::io;
+use ratatui::text::Line;
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use std::any::type_name;
 
-use anyhow::Result;
-use ratatui::{backend::CrosstermBackend, Terminal};
-use ratatui::layout::{Constraint, Direction, Layout};
-use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph};
-use ratatui::style::{Style, Color};
-use crossterm::{
-    event::{self, Event, KeyCode, KeyEvent},
-    execute,
-    terminal::{disable_raw_mode, enable_raw_mode},
-};
+use crate::utils::structs::{Project, Prompt};
 
-use crate::utils::structs::Project;
-
+#[derive(Clone, Copy)]
 pub enum AppState {
     SelectProject,
     SelectPrompt,
@@ -25,24 +17,66 @@ pub enum InputEvent {
     Select,
     New,
     Delete,
-    Quit,
-    Edit,
+    SwitchBranch,
     ChangeProject,
-    ScrollMode,
-    Invalid,
+    EditScrolls,
+    AskModel,
+    Quit,
+    NoOp,
 }
 
 impl From<KeyEvent> for InputEvent {
-    fn from(key_event: KeyEvent) -> InputEvent {
-        match key_event.code {
-            KeyCode::Char('s') => InputEvent::Select,
-            KeyCode::Char('n') => InputEvent::New,
-            KeyCode::Char('d') => InputEvent::Delete,
-            KeyCode::Char('q') => InputEvent::Quit,
-            KeyCode::Char('e') => InputEvent::Edit,
-            KeyCode::Char('c') => InputEvent::ChangeProject,
-            KeyCode::Char('l') => InputEvent::ScrollMode,
-            _ => InputEvent::Invalid,
+    fn from(event: KeyEvent) -> Self {
+        match event {
+            KeyEvent {
+                code: KeyCode::Char('s'),
+                modifiers: KeyModifiers::NONE,
+                kind: _,
+                state: _,
+            } => InputEvent::Select,
+            KeyEvent {
+                code: KeyCode::Char('n'),
+                modifiers: KeyModifiers::NONE,
+                kind: _,
+                state: _,
+            } => InputEvent::New,
+            KeyEvent {
+                code: KeyCode::Char('d'),
+                modifiers: KeyModifiers::NONE,
+                kind: _,
+                state: _,
+            } => InputEvent::Delete,
+            KeyEvent {
+                code: KeyCode::Char('b'),
+                modifiers: KeyModifiers::NONE,
+                kind: _,
+                state: _,
+            } => InputEvent::SwitchBranch,
+            KeyEvent {
+                code: KeyCode::Char('c'),
+                modifiers: KeyModifiers::NONE,
+                kind: _,
+                state: _,
+            } => InputEvent::ChangeProject,
+            KeyEvent {
+                code: KeyCode::Char('e'),
+                modifiers: KeyModifiers::NONE,
+                kind: _,
+                state: _,
+            } => InputEvent::EditScrolls,
+            KeyEvent {
+                code: KeyCode::Char('a'),
+                modifiers: KeyModifiers::NONE,
+                kind: _,
+                state: _,
+            } => InputEvent::AskModel,
+            KeyEvent {
+                code: KeyCode::Char('q'),
+                modifiers: KeyModifiers::NONE,
+                kind: _,
+                state: _,
+            } => InputEvent::Quit,
+            _ => InputEvent::NoOp,
         }
     }
 }
@@ -57,34 +91,14 @@ pub fn format_project_title(current_project: &Option<Project>) -> String {
     }
 }
 
-pub fn build_project_list(projects: &[Project]) -> (Vec<ListItem>, Vec<String>) {
-    let mut items = Vec::new();
-    let mut proj_items = Vec::new();
-    for project in projects {
+pub fn build_select_project(projects: &[Project])-> (Vec<Line<'static>>, Vec<String>) {
+    let mut proj_items: Vec<Line> = vec![];
+    let mut str_items: Vec<String> = vec![];
+    for project in projects.iter() {
         let proj_name = format!(" -[ {:?} ]-", project.project_path.split('/').last().unwrap_or(""));
-        proj_items.push(proj_name.clone());
-        items.push(ListItem::new(proj_name));
+        str_items.push(proj_name.to_owned());
+        proj_items.push(Line::from(proj_name));
     }
-    items.push(ListItem::new("[s] Select Project"));
-    items.push(ListItem::new("[n] New Project"));
-    items.push(ListItem::new("[d] Delete Project"));
-    items.push(ListItem::new("[q] Quit"));
-    (items, proj_items)
+    return (proj_items, str_items)
 }
 
-pub fn display_project_list(
-    terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
-    title: &str,
-    items: Vec<ListItem>,
-) -> Result<()> {
-    terminal.draw(|frame| {
-        let chunks = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([Constraint::Percentage(100)].as_ref())
-            .split(frame.area());
-        let block = Block::default().title(title).borders(Borders::ALL);
-        let list = List::new(items).block(block);
-        frame.render_widget(list, chunks[0]);
-    })?;
-    Ok(())
-}
