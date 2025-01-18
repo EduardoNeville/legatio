@@ -11,7 +11,7 @@ use crossterm::{
 
 use std::time::Duration;
 use std::{
-    fs::{self, File, OpenOptions},
+    fs::{self, OpenOptions},
     path::PathBuf
 };
 
@@ -19,7 +19,6 @@ use std::{io, vec};
 use std::io::prelude::*;
 
 use sqlx::{Result, SqlitePool};
-use crate::utils::logger::log_error;
 use crate::{
     db::{
         project::{delete_project, get_projects, store_project},
@@ -29,11 +28,11 @@ use crate::{
     services::{
         model::get_openai_response, 
         search::{item_selector, select_files}, 
-        ui::{usr_prompt_chain, usr_scrolls},
+        ui::usr_scrolls,
         display::AppState
     },
     utils::{
-        file_utils::read_file, logger::log_info, prompt_utils::{format_prompt, prompt_chain, system_prompt}, structs::{Project, Prompt, Scroll}
+        file_utils::read_file, prompt_utils::{format_prompt, system_prompt}, structs::{Project, Prompt}
     }
 };
 
@@ -190,6 +189,7 @@ impl Legatio {
                     if scroll_items.is_none() {
                         scroll_items = Some(vec![]);
                     }
+
                     // Now safely modify the inner `Vec<Line>`
                     if let Some(items) = scroll_items.as_mut() {
                         for scroll in scrolls {
@@ -312,7 +312,9 @@ impl Legatio {
                 let projects = get_projects(pool).await.unwrap();
                 if !projects.is_empty() {
                     let (_, str_names) = build_select_project(&projects);
+                    disable_raw_mode()?;
                     if let Some(selected_project) = item_selector(str_names.clone()).unwrap() {
+                        enable_raw_mode()?;
                         let sel_idx = str_names.iter().position(|p| *p == selected_project).unwrap();
                         self.current_project = Some(projects[sel_idx].clone());
                         return Ok(AppState::SelectPrompt);
@@ -336,7 +338,9 @@ impl Legatio {
                 let projects = get_projects(pool).await.unwrap();
                 if !projects.is_empty() {
                     let (_, str_names) = build_select_project(&projects);
+                    disable_raw_mode()?;
                     if let Some(selected_project) = item_selector(str_names.clone()).unwrap() {
+                        enable_raw_mode()?;
                         let sel_idx = str_names.iter().position(|p| *p == selected_project).unwrap();
                         delete_project(pool, &projects[sel_idx].project_id)
                             .await
@@ -364,18 +368,25 @@ impl Legatio {
             InputEvent::Select => {
                 if let Some(project) = &self.current_project {
                     let prompts = get_prompts(pool, &project.project_id).await.unwrap();
-                    let mut concat_prompts = Vec::new();
-                    for p in prompts.iter() {
-                        let (p_str, o_str) = format_prompt(&p);
-                        concat_prompts.push(format!("{}\n{}", p_str, o_str));
-                    }
+                    if !prompts.is_empty() {
+                        let mut concat_prompts = Vec::new();
+                        for p in prompts.iter() {
+                            let (p_str, o_str) = format_prompt(&p);
+                            concat_prompts.push(format!("{}\n{}", p_str, o_str));
+                        }
 
-                    if let Some(selected_prompt) = item_selector(concat_prompts.clone()).unwrap() {
-                        let index =
-                            concat_prompts.iter().position(|p| p == &selected_prompt).unwrap();
-                        self.current_prompt = Some(prompts[index].clone());
-                        return Ok(AppState::AskModel);
+                        disable_raw_mode()?;
+                        if let Some(selected_prompt) = item_selector(concat_prompts.clone()).unwrap() {
+                            enable_raw_mode()?;
+                            let index = concat_prompts
+                                .iter()
+                                .position(|p| p == &selected_prompt)
+                                .unwrap();
+                            self.current_prompt = Some(prompts[index].clone());
+                            return Ok(AppState::AskModel);
+                        }
                     }
+                    return Ok(AppState::AskModel);
                 }
             }
             InputEvent::Delete => {
@@ -387,9 +398,13 @@ impl Legatio {
                         concat_prompts.push(format!("{}\n{}", p_str, o_str));
                     }
 
+                    disable_raw_mode()?;
                     if let Some(selected_prompt) = item_selector(concat_prompts.clone()).unwrap() {
-                        let index =
-                            concat_prompts.iter().position(|p| p == &selected_prompt).unwrap();
+                        enable_raw_mode()?;
+                        let index = concat_prompts
+                            .iter()
+                            .position(|p| p == &selected_prompt)
+                            .unwrap();
                         delete_prompt(pool, &prompts[index]).await.unwrap();
                     }
                 }
@@ -481,9 +496,13 @@ impl Legatio {
                     let scrolls = get_scrolls(pool, &project.project_id).await.unwrap();
                     let scroll_names = scrolls.iter().map(|s| s.scroll_path.clone()).collect::<Vec<_>>();
 
+                    disable_raw_mode()?;
                     if let Some(selected_scroll) = item_selector(scroll_names.clone()).unwrap() {
-                        let index =
-                            scroll_names.iter().position(|s| s == &selected_scroll).unwrap();
+                        enable_raw_mode()?;
+                        let index = scroll_names
+                            .iter()
+                            .position(|s| s == &selected_scroll)
+                            .unwrap();
                         delete_scroll(pool, &scrolls[index].scroll_id)
                             .await
                             .unwrap();
@@ -500,457 +519,6 @@ impl Legatio {
             _ => {}
         }
         Ok(AppState::EditScrolls)
-    }
-
-    // %%%%%% old code %%%%%%
-
-    //async fn handle_select_project(
-    //    &mut self,
-    //    terminal: &mut Terminal<CrosstermBackend<&mut io::Stdout>>,
-    //    pool: &SqlitePool,
-    //) -> Result<AppState> {
-    //    loop {
-
-    //        // Fetch and display projects
-    //        let projects = get_projects(pool).await.unwrap();
-
-    //        let top_title = format_project_title(&self.current_project);
-    //        let top_text: Vec<Line> = vec![
-    //            Line::from("[s] Select Project"),
-    //            Line::from("[n] New Project"),
-    //            Line::from("[d] Delete Project"),
-    //            Line::from("[q] Quit"),
-    //        ];
-
-    //        let top_box = Paragraph::new(top_text)
-    //            .centered()
-    //            .block(Block::default().borders(Borders::ALL).title(top_title))
-    //            .style(Style::default().fg(Color::Green));
-
-    //        let bot_title = "[ Projects ]";
-    //        let (bot_items, str_items) = build_select_project(&projects);
-
-    //        let bot_box = Paragraph::new(bot_items)
-    //            .centered()
-    //            .block(Block::default().borders(Borders::ALL).title(bot_title))
-    //            .style(Style::default().fg(Color::LightBlue));
-
-    //        terminal.draw(|f| {
-    //            // Split the terminal into two sections: top and bottom
-    //            let chunks = Layout::default()
-    //                .direction(Direction::Vertical)
-    //                .constraints([Constraint::Percentage(20), Constraint::Percentage(80)].as_ref())
-    //                .split(f.area());
-    //            f.render_widget(top_box, chunks[0]);
-    //            f.render_widget(bot_box, chunks[1]);
-    //        })?;
-
-    //        // Handle input
-    //        if crossterm::event::poll(Duration::from_millis(100))? {
-    //            if let Event::Key(key_event) = event::read()? {
-    //                match InputEvent::from(key_event) {
-    //                    InputEvent::Select => {
-    //                        if !projects.is_empty() {
-    //                            let sel_p: String = item_selector(str_items.clone()).unwrap().unwrap();
-    //                            let sel_idx = str_items.iter().position(|p| *p == sel_p).unwrap();
-    //                            self.current_project = Some(projects[sel_idx].clone());
-    //                            return Ok(AppState::SelectPrompt);
-    //                        } else {
-    //                            let selected_dir = select_files(None).unwrap();
-    //                            let project = Project::new(&selected_dir);
-    //                            store_project(pool, &project).await.unwrap();
-    //                            self.current_project = Some(project.clone());
-    //                            return Ok(AppState::EditScrolls);
-    //                        }
-    //                    }
-    //                    InputEvent::New => {
-    //                        let selected_dir = select_files(None).unwrap();
-    //                        let project = Project::new(&selected_dir);
-    //                        store_project(pool, &project).await.unwrap();
-    //                        self.current_project = Some(project.clone());
-    //                        return Ok(AppState::EditScrolls);
-    //                    }
-    //                    InputEvent::Delete => {
-    //                        if !projects.is_empty() {
-    //                            let sel_p: String = item_selector(str_items.clone()).unwrap().unwrap_or_default();
-    //                            let sel_idx = str_items.iter().position(|p| *p == sel_p).unwrap();
-    //                            delete_project(pool, &projects[sel_idx].project_id).await.unwrap();
-    //                        }
-    //                        continue
-    //                    }
-    //                    InputEvent::Quit => {
-    //                        disable_raw_mode()?;
-    //                        std::process::exit(0);
-    //                    }
-    //                    _ => continue
-    //                }
-    //            }
-    //        }
-    //    }
-    //}
-
-    //async fn handle_select_prompt(
-    //    &mut self,
-    //    terminal: &mut Terminal<CrosstermBackend<&mut io::Stdout>>,
-    //    pool: &SqlitePool,
-    //) -> Result<AppState> {
-    //    loop {
-    //        // Show prompts
-    //        let prompts = get_prompts(
-    //            pool,
-    //            &self.current_project.as_ref().unwrap().project_id
-    //        ).await.unwrap();
-
-    //        let top_title = format_project_title(&self.current_project);
-    //        let mut top_text: Vec<Line> = vec![];
-
-    //        let proj_name = &self.current_project.as_ref().unwrap()
-    //            .project_path.split("/").last().unwrap();
-
-
-    //        let proj_prompt = format!("  -[ {} : Unchained ]-", proj_name);
-    //        let mut bot_items: Vec<Line> = vec![
-    //            Line::from(proj_prompt.clone())
-    //        ];
-
-    //        let mut concat_prompts = vec![];
-    //        if !prompts.is_empty() {
-    //            top_text.push(Line::from("[s]: Select Prompt"));
-    //            let bot_pmpts = usr_prompts(
-    //                prompts.as_ref()
-    //            ).await.unwrap();
-    //            bot_pmpts.iter().for_each(|p| bot_items.push(Line::from(p.to_owned())));
-
-    //            for p in prompts.iter() {
-    //                let (p_str, o_str) = format_prompt(&p);
-    //                concat_prompts.push(format!("{}\n{}", p_str, o_str));
-    //            }
-
-    //            concat_prompts.push(proj_prompt);
-    //        } else {
-    //            log_info("This project has no prompts!");
-    //            return Ok(AppState::AskModel)
-    //        }
-    //        top_text.push(Line::from(" [d]: Delete Prompt"));
-    //        top_text.push(Line::from(" [c]: Change Project"));
-
-    //        let top_box = Paragraph::new(top_text)
-    //            .centered()
-    //            .block(Block::default().borders(Borders::ALL)
-    //            .title(top_title))
-    //            .style(Style::default().fg(Color::Green));
-
-    //        let bot_box = Paragraph::new(bot_items)
-    //            .block(Block::default().borders(Borders::ALL)
-    //            .title(format!("[ {} -:- Prompts ]", proj_name)))
-    //            .style(Style::default().fg(Color::LightBlue));
-
-    //        terminal.draw(|f| {
-    //            // Split the terminal into two sections: top and bottom
-    //            let chunks = Layout::default()
-    //                .direction(Direction::Vertical)
-    //                .constraints([Constraint::Percentage(20), Constraint::Percentage(80)].as_ref())
-    //                .split(f.area());
-    //            f.render_widget(top_box, chunks[0]);
-    //            f.render_widget(bot_box, chunks[1]);
-    //        })?;
-
-    //        if crossterm::event::poll(Duration::from_millis(100))? {
-    //            if let Event::Key(key_event) = event::read()? {
-    //                match InputEvent::from(key_event) {
-    //                    InputEvent::Select => {
-    //                        let sel_p: String = item_selector(concat_prompts.clone()).unwrap().unwrap();
-    //                        let sel_idx = concat_prompts.iter().position(|p| *p == sel_p).unwrap();
-    //                        self.current_prompt = match prompts.get(sel_idx) {
-    //                            Some(p) => Some(p.to_owned()),
-    //                            _ => None,
-    //                        };
-    //                        return Ok(AppState::AskModel);
-    //                    },
-    //                    InputEvent::Delete => {
-    //                        let sel_p: String = item_selector(concat_prompts.clone()).unwrap().unwrap();
-    //                        let sel_idx = concat_prompts.iter().position(|p| *p == sel_p).unwrap();
-    //                        let del_prompt = match prompts.get(sel_idx) {
-    //                            Some(p) => Some(p.to_owned()),
-    //                            _ => None,
-    //                        };
-
-    //                        delete_prompt(pool, &del_prompt.unwrap())
-    //                            .await
-    //                            .expect("Unable to delete prompt");
-
-    //                        return Ok(AppState::SelectPrompt);
-    //                    },
-    //                    InputEvent::ChangeProject => {
-    //                        return Ok(AppState::SelectProject);
-    //                    },
-    //                    _ => {
-    //                        continue
-    //                    },
-    //                }
-    //            }
-    //        }
-    //    }
-    //}
-
-    //async fn handle_ask_model(
-    //    &mut self,
-    //    terminal: &mut Terminal<CrosstermBackend<&mut io::Stdout>>,
-    //    pool: &SqlitePool,
-    //) -> Result<AppState> {
-    //    loop {
-    //        // Preparing scrolls 
-    //        let scrolls = get_scrolls(
-    //            pool,
-    //            &self.current_project.as_ref().unwrap().project_id
-    //        ).await.unwrap();
-    //        let top_title = format_project_title(&self.current_project);
-    //        let top_text: Vec<Line> = vec![
-    //            Line::from(" [a] Ask the Model"),
-    //            Line::from(" [b] Switch branch"),
-    //            Line::from(" [e] Edit Scrolls"),
-    //            Line::from(" [c] Change project"),
-    //        ];
-
-    //        let top_box = Paragraph::new(top_text)
-    //            .centered()
-    //            .block(Block::default().borders(Borders::ALL)
-    //            .title(top_title))
-    //            .style(Style::default().fg(Color::Green));
-
-    //        // Box Builder
-    //        
-    //        let scroll_title = "[ Scrolls ]";
-    //        let mut scroll_items: Vec<Line> = vec![];
-    //        let str_scrolls = usr_scrolls(
-    //            pool,
-    //            &self.current_project.as_ref().unwrap()
-    //        ).await.unwrap();
-    //        str_scrolls.iter().for_each(|s| scroll_items.push(Line::from(s.to_string())));
-    //        let scroll_box = Paragraph::new(scroll_items)
-    //            .centered()
-    //            .block(Block::default().borders(Borders::ALL).title(scroll_title))
-    //            .style(Style::default().fg(Color::LightBlue));
-
-    //        // Preparing prompts
-    //        let prompt = self.current_prompt.as_ref();
-    //        let file_prompt = fs::read_to_string(
-    //            &PathBuf::from(
-    //                &self.current_project.as_ref().unwrap().project_path
-    //            ).join("legatio.md")
-    //        );
-
-    //        let mut prompts: Option<Vec<Prompt>> = None;
-    //        let mut pmp_chain: Option<Vec<Prompt>> = None;
-    //        let mut prompt_items: Vec<Line> = Vec::new();
-    //        if !file_prompt.is_ok() {
-    //            File::create(
-    //                &PathBuf::from(
-    //                    &self.current_project.as_ref().unwrap().project_path
-    //                ).join("legatio.md")
-    //            ).expect("Could not create file!");
-    //        } else if prompt.is_some() {
-    //            prompts = Some(get_prompts(
-    //                pool, 
-    //                &self.current_project.as_ref().unwrap().project_id
-    //            ).await.unwrap());
-
-    //            pmp_chain = Some(prompt_chain(
-    //                prompts.as_ref().unwrap().as_ref(),
-    //                &self.current_prompt.as_ref().unwrap()
-    //            ));
-
-    //            let p_strs = usr_prompt_chain(pmp_chain.as_ref().unwrap().as_ref());
-    //            p_strs.iter().for_each(|p| prompt_items.push(Line::from(p.to_string())));
-    //        }
-
-    //        let prompt_title = "[ Prompt Chain ]";
-    //        let prompt_box = Paragraph::new(prompt_items)
-    //            .block(Block::default().borders(Borders::ALL).title(prompt_title))
-    //            .style(Style::default().fg(Color::LightBlue));
-
-    //        terminal.draw(|f| {
-    //            // Split the terminal into two sections: top and bottom
-    //            let chunks = Layout::default()
-    //                .direction(Direction::Vertical)
-    //                .constraints([
-    //                    Constraint::Percentage(15),
-    //                    Constraint::Percentage(24),
-    //                    Constraint::Percentage(61),
-    //                ].as_ref())
-    //                .split(f.area());
-    //            f.render_widget(top_box, chunks[0]);
-    //            f.render_widget(scroll_box, chunks[1]);
-    //            f.render_widget(prompt_box, chunks[2]);
-    //        })?;
-
-    //        if crossterm::event::poll(Duration::from_millis(100))? {
-    //            if let Event::Key(key_event) = event::read()? {
-    //                match InputEvent::from(key_event) {
-    //                    InputEvent::AskModel => {
-    //                        let sys_prompt = system_prompt(&scrolls);
-    //                        
-    //                        if prompts.as_ref().is_none() {
-    //                            prompts = Some(get_prompts(
-    //                                pool, 
-    //                                &self.current_project.as_ref().unwrap().project_id
-    //                            ).await.unwrap());
-    //                        }
-
-    //                        if !prompts.as_ref().unwrap().is_empty() && prompt.is_some() {
-    //                            pmp_chain = Some(prompt_chain(
-    //                                &prompts.as_ref().unwrap().as_ref(),
-    //                                prompt.unwrap()
-    //                            ));
-    //                        }
-
-    //                        let curr_prompt = fs::read_to_string(
-    //                            &PathBuf::from(
-    //                                &self.current_project.as_ref().unwrap().project_path
-    //                            ).join("legatio.md")
-    //                        ).unwrap();
-
-    //                        let output = get_openai_response(
-    //                            &sys_prompt,
-    //                            pmp_chain,
-    //                            &curr_prompt
-    //                        ).await.unwrap();
-    //                        
-    //                        let mut file = OpenOptions::new()
-    //                                .write(true)
-    //                                .append(true)
-    //                                .open(&PathBuf::from(
-    //                                    &self.current_project
-    //                                    .as_ref()
-    //                                    .unwrap()
-    //                                    .project_path)
-    //                                .join("legatio.md"))
-    //                                .unwrap();
-    //                        let out_md = format!("0o0o0o0o0 \n Answer: \n{}", output);
-    //                        if let Err(e) = writeln!(file, "{}", out_md) {
-    //                            log_error(&format!("Couldn't write to file: {}", e));
-    //                        }
-    //                        
-    //                        let prev_id = match &self.current_prompt.as_ref() {
-    //                            Some(p) => &p.prompt_id,
-    //                            None => &self.current_project.as_ref().unwrap().project_id,
-    //                        };
-
-    //                        let mut lst_prompt = Prompt::new(
-    //                            &self.current_project.as_ref().unwrap().project_id,
-    //                            &curr_prompt,
-    //                            &output,
-    //                            &prev_id,
-    //                        );
-    //                        store_prompt(pool, &mut lst_prompt).await.unwrap();
-
-    //                        self.current_prompt = Some(lst_prompt);
-    //                    },
-    //                    InputEvent::SwitchBranch => {
-    //                        return Ok(AppState::SelectPrompt)
-    //                    }, 
-    //                    InputEvent::EditScrolls => {
-    //                        return Ok(AppState::EditScrolls)
-    //                    }, 
-    //                    InputEvent::ChangeProject => {
-    //                        return Ok(AppState::SelectProject)
-    //                    },
-    //                    _ => { 
-    //                        continue
-    //                    }
-    //                }
-    //            }
-    //        }
-    //    }
-    //}
-
-    //async fn handle_edit_scrolls(
-    //    &self,
-    //    terminal: &mut Terminal<CrosstermBackend<&mut io::Stdout>>,
-    //    pool: &SqlitePool,
-    //) -> Result<AppState> {
-    //    loop {
-    //        let scrolls = get_scrolls(
-    //            pool,
-    //            &self.current_project.as_ref().unwrap().project_id
-    //        ).await.unwrap();
-
-    //        // Menu
-    //        let top_title = format_project_title(&self.current_project);
-    //        let top_text: Vec<Line> = vec![
-    //            Line::from(" [n] New Scroll"),
-    //            Line::from(" [d] Delete a Scroll"),
-    //            Line::from(" [s] Select a Prompt"),
-    //            Line::from(" [c] Change project"),
-    //        ];
-    //        let top_box = Paragraph::new(top_text)
-    //            .centered()
-    //            .block(Block::default().borders(Borders::ALL)
-    //            .title(top_title))
-    //            .style(Style::default().fg(Color::Green));
-
-
-    //        // Scroll Box Builder
-    //        let scroll_title = "[ Scrolls ]";
-    //        let mut scroll_items: Vec<Line> = vec![];
-    //        scrolls.iter().for_each(|s| 
-    //            scroll_items.push(Line::from(
-    //                s.scroll_path.split("/").last().unwrap().to_string()
-    //            ))
-    //        );
-    //        let scroll_box = Paragraph::new(scroll_items)
-    //            .centered()
-    //            .block(Block::default().borders(Borders::ALL).title(scroll_title))
-    //            .style(Style::default().fg(Color::LightBlue));
-
-    //        terminal.draw(|f| {
-    //            // Split the terminal into two sections: top and bottom
-    //            let chunks = Layout::default()
-    //                .direction(Direction::Vertical)
-    //                .constraints([
-    //                    Constraint::Percentage(39),
-    //                    Constraint::Percentage(61),
-    //                ].as_ref())
-    //                .split(f.area());
-    //            f.render_widget(top_box, chunks[0]);
-    //            f.render_widget(scroll_box, chunks[1]);
-    //        })?;
-
-    //        if crossterm::event::poll(Duration::from_millis(100))? {
-    //            if let Event::Key(key_event) = event::read()? {
-    //                match InputEvent::from(key_event) {
-    //                    InputEvent::New => {
-    //                        self.scroll_append_ctrl(
-    //                            pool,
-    //                            &self.current_project.as_ref().unwrap()
-    //                        ).await.unwrap();
-    //                    },
-    //                    InputEvent::Delete => {
-    //                        //let scroll_idx = usr_ask("Select scroll index delete: ").unwrap();
-    //                        //if scroll_idx < scrolls.len() {
-    //                        //    delete_scroll(pool, &scrolls[scroll_idx].scroll_id).await.unwrap();
-    //                        //}
-    //                        continue
-    //                    },
-    //                    InputEvent::Select => {
-    //                        return Ok(AppState::SelectPrompt);
-    //                    },
-    //                    InputEvent::ChangeProject => {
-    //                        return Ok(AppState::SelectProject);
-    //                    }
-    //                    _ => continue
-    //                }
-    //            }
-    //        }
-    //    }
-    //}
-
-    // Utility Functions
-    async fn scroll_append_ctrl(&self, pool: &SqlitePool, project: &Project) -> Result<Vec<Scroll>> {
-        let selected_scrolls = select_files(Some(&project.project_path)).unwrap();
-        let scroll = read_file(&selected_scrolls, &project.project_id).unwrap();
-        store_scroll(pool, &scroll).await.unwrap();
-        Ok(get_scrolls(pool, &project.project_id).await.unwrap())
     }
     
 }
