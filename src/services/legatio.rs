@@ -503,8 +503,10 @@ impl Legatio {
                     if let Some(curr_prompt) = &self.current_prompt {
                         chain = Some(prompt_chain(&prompts, curr_prompt));
                     }
+                    log_info(&format!("Curr prompt: {:?}", self.current_prompt.as_ref()));
 
                     let final_prompt = chain_match_canvas(project).unwrap();
+                    log_info(&format!("Question: {}", final_prompt));
 
                     let output = get_openai_response(&sys_prompt, chain, &final_prompt)
                         .await
@@ -522,9 +524,13 @@ impl Legatio {
                     store_prompt(pool, &new_prompt).await.unwrap();
                     self.current_prompt = Some(new_prompt);
 
+                    log_info(&format!("New prompt: {:?}", self.current_prompt.as_ref()));
+                    let mut new_prompts = prompts.clone();
+                    new_prompts.push(self.current_prompt.as_ref().unwrap().clone());
+
                     chain_into_canvas(
                         project,
-                        Some(&prompts),
+                        Some(&new_prompts),
                         self.current_prompt.as_ref()
                     ).unwrap();
                 }
