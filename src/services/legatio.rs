@@ -19,7 +19,8 @@ use std::{
 use std::{io, vec};
 use std::io::prelude::*;
 
-use sqlx::{Result, SqlitePool};
+use anyhow::Result;
+use sqlx::SqlitePool;
 use crate::{
     core::{
         project::{
@@ -131,15 +132,15 @@ impl Legatio {
                 top_text = vec![
                     Line::from("[s]: Select Prompt"),
                     Line::from("[d]: Delete Prompt"),
-                    Line::from("[p]: Change Project"),
                     Line::from("[e]: Edit Scrolls"),
+                    Line::from("[p]: Change Project"),
                     Line::from("[q]: Quit"),
                 ];
 
                 if let Some(project) = &self.current_project {
                     let project_name = project
                         .project_path
-                        .split('/')
+                        .split("/")
                         .last()
                         .unwrap_or("[Unnamed Project]");
                     bot_title = format!("[ {} -:- Prompts ]", project_name);
@@ -191,9 +192,9 @@ impl Legatio {
                         ).join("legatio.md")                                   
                     );
 
-                    let mut prompts: Option<Vec<Prompt>> = None;
-                    let mut pmp_chain: Option<Vec<Prompt>> = None;
-                    if !file_prompt.is_ok() {
+                    let prompts: Option<Vec<Prompt>>;
+                    let pmp_chain: Option<Vec<Prompt>>;
+                    if file_prompt.is_err() {
                         File::create(
                             &PathBuf::from(
                                 &self.current_project.as_ref().unwrap().project_path
@@ -210,7 +211,7 @@ impl Legatio {
                         } else {
                             pmp_chain = Some(prompt_chain(
                                 prompts.as_ref().unwrap().as_ref(),
-                                &self.current_prompt.as_ref().unwrap()
+                                self.current_prompt.as_ref().unwrap()
                             ));
 
                             let p_strs = usr_prompt_chain(pmp_chain.as_ref().unwrap().as_ref());
@@ -226,7 +227,8 @@ impl Legatio {
                 top_text = vec![
                     Line::from("[n] New Scroll"),
                     Line::from("[d] Delete Scroll"),
-                    Line::from("[s] Select Prompt"),
+                    Line::from("[a] Ask Model"),
+                    Line::from("[s] Switch Branch"),
                     Line::from("[p] Change Project"),
                     Line::from("[q]: Quit"),
                 ];
@@ -256,14 +258,14 @@ impl Legatio {
         &self,
         terminal: &mut Terminal<CrosstermBackend<&mut io::Stdout>>,
         top_title: &str,
-        top_text: &Vec<Line>,
+        top_text: &[Line],
         scroll_title: Option<&str>,
         scroll_text: Option<Vec<Line>>,
         bot_title: &str,
-        bot_items: &Vec<Line>,
+        bot_items: &[Line],
     ) -> Result<()> {
         // Top box
-        let top_box = Paragraph::new(top_text.clone())
+        let top_box = Paragraph::new(top_text.to_owned())
             .block(Block::default().borders(Borders::ALL).border_type(BorderType::Thick).title(top_title))
             .style(Style::default().fg(Color::LightBlue));
 
@@ -290,7 +292,7 @@ impl Legatio {
         };
 
         // Bottom box
-        let bot_box = Paragraph::new(bot_items.clone())
+        let bot_box = Paragraph::new(bot_items.to_owned())
             .block(Block::default().borders(Borders::ALL).border_type(BorderType::Thick).title(bot_title))
             .style(Style::default().fg(Color::LightBlue));
 
@@ -587,6 +589,9 @@ impl Legatio {
             }
             InputEvent::ChangeProject => {
                 return Ok(AppState::SelectProject);
+            }
+            InputEvent::AskModel => {
+                return Ok(AppState::AskModel);
             }
             InputEvent::Quit => {
                 disable_raw_mode()?;

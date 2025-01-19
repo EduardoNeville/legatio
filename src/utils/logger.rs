@@ -10,7 +10,6 @@ static mut LOG_FILE: Option<Mutex<File>> = None;
 pub fn initialize_logger(file_path: &str) -> io::Result<()> {
     let file = OpenOptions::new()
         .create(true)
-        .write(true)
         .append(true)
         .open(file_path)?;
 

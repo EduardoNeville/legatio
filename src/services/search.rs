@@ -50,11 +50,8 @@ pub fn select_files(dir_path: Option<&str>) -> Result<String> {
         });
     });
 
-    let file: Option<String> = match picker.pick()? {
-        // the matched `entry` is `&DirEntry`
-        Some(entry) => Some(entry.path().display().to_string()),
-        None => None,
-    };
+    let file: Option<String> = picker.pick()?
+        .map(|entry| entry.path().display().to_string());
 
     enable_raw_mode()?;
     Ok(file.unwrap())
@@ -74,10 +71,8 @@ pub fn item_selector(items: Vec<String>) -> Result<Option<String>> {
     }
 
     // open interactive prompt
-    let sel_item: Option<String> = match picker.pick()? {
-        Some(opt) => Some(opt.to_string()),
-        None => None,
-    };
+    let sel_item: Option<String> = picker.pick()?
+        .map(|opt| opt.to_string());
 
     enable_raw_mode()?;
     Ok(sel_item)

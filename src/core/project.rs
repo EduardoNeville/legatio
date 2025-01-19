@@ -41,15 +41,15 @@ pub async fn get_projects(pool: &SqlitePool) -> Result<Vec<Project>> {
 
 pub async fn delete_project(pool: &SqlitePool, project_id: &str) -> Result<()> {
     let col_name = "project_id";
-    delete_module(pool, &"projects", &col_name, project_id)
+    delete_module(pool, "projects", col_name, project_id)
         .await
         .expect("Error in project deletion");
     
-    delete_module(pool, &"prompts", &col_name, project_id)
+    delete_module(pool, "prompts", col_name, project_id)
         .await
         .expect("Error in prompts deletion");
 
-    delete_module(pool, &"scrolls", &col_name, project_id)
+    delete_module(pool, "scrolls", col_name, project_id)
         .await
         .expect("Error in scoll deletion");
 
