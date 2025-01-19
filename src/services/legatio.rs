@@ -21,6 +21,7 @@ use std::io::prelude::*;
 
 use anyhow::Result;
 use sqlx::SqlitePool;
+use crate::core::canvas::{chain_into_canvas, chain_match_canvas};
 use crate::{
     core::{
         project::{
@@ -427,6 +428,13 @@ impl Legatio {
                                     Some(p) => Some(p.to_owned()),
                                     _ => None,
                                 };
+                                if let Some(curr_prompt) = &self.current_prompt {
+                                    chain_into_canvas(
+                                        project,
+                                        &prompts,
+                                        curr_prompt
+                                    ).unwrap();
+                                }
                             } else {
                                 self.current_prompt = None;
                             }
@@ -496,24 +504,18 @@ impl Legatio {
                     let sys_prompt = system_prompt(&scrolls);
 
                     let prompts = get_prompts(pool, &project.project_id).await.unwrap();
-                    let final_prompt = fs::read_to_string(
-                        &PathBuf::from(&project.project_path).join("legatio.md"),
-                    )
-                    .unwrap_or_default();
+                    let mut final_prompt = String::new();
+                    if let Some(curr_prompt) = &self.current_prompt {
+                        final_prompt = chain_match_canvas(
+                            project,
+                            &prompts,
+                            curr_prompt
+                        ).unwrap();
+                    }
 
                     let output = get_openai_response(&sys_prompt, Some(prompts.clone()), &final_prompt)
                         .await
                         .unwrap();
-
-                    // Append the response to the "legatio.md" file
-                    let mut file = OpenOptions::new()
-                        .write(true)
-                        .append(true)
-                        .open(&PathBuf::from(&project.project_path).join("legatio.md"))
-                        .unwrap();
-
-                    let content = format!("\n---\nAnswer:\n{}", output);
-                    writeln!(file, "{}", content).unwrap();
 
                     let new_prompt = Prompt::new(
                         &project.project_id,
@@ -523,6 +525,12 @@ impl Legatio {
                             .as_ref()
                             .map_or(project.project_id.clone(), |p| p.prompt_id.clone()),
                     );
+
+                    chain_into_canvas(
+                        project,
+                        &prompts,
+                        &new_prompt
+                    ).unwrap();
                     store_prompt(pool, &new_prompt).await.unwrap();
                     self.current_prompt = Some(new_prompt);
                 }
