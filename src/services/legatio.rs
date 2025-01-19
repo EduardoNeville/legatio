@@ -132,6 +132,7 @@ impl Legatio {
                     Line::from("[s]: Select Prompt"),
                     Line::from("[d]: Delete Prompt"),
                     Line::from("[p]: Change Project"),
+                    Line::from("[e]: Edit Scrolls"),
                     Line::from("[q]: Quit"),
                 ];
 
@@ -163,6 +164,7 @@ impl Legatio {
                     Line::from("[b] Switch branch"),
                     Line::from("[e] Edit Scrolls"),
                     Line::from("[p] Change Project"),
+                    Line::from("[q] Quit"),
                 ];
                 scroll_title = Some("[ Scrolls ]");
                 bot_title = String::from("[ Prompts ]");
@@ -226,6 +228,7 @@ impl Legatio {
                     Line::from("[d] Delete Scroll"),
                     Line::from("[s] Select Prompt"),
                     Line::from("[p] Change Project"),
+                    Line::from("[q]: Quit"),
                 ];
                 bot_title = "[ Scrolls ]".to_string();
 
@@ -272,8 +275,8 @@ impl Legatio {
                 .style(Style::default().fg(Color::LightBlue));
 
             let constraints = Vec::from([
-                Constraint::Percentage(15),
-                Constraint::Percentage(24),
+                Constraint::Percentage(18),
+                Constraint::Percentage(21),
                 Constraint::Percentage(61),
             ]);
 
@@ -281,8 +284,8 @@ impl Legatio {
         } else {
             // No scroll box; provide default constraints
             (None, Vec::from([
-                Constraint::Percentage(15),
-                Constraint::Percentage(85),
+                Constraint::Percentage(18),
+                Constraint::Percentage(82),
             ]))
         };
 
@@ -465,6 +468,9 @@ impl Legatio {
             InputEvent::ChangeProject => {
                 return Ok(AppState::SelectProject);
             }
+            InputEvent::EditScrolls => {
+                return Ok(AppState::EditScrolls);
+            }
             InputEvent::Quit => {
                 //TODO handle store appstate
                 disable_raw_mode()?;
@@ -528,6 +534,10 @@ impl Legatio {
             InputEvent::ChangeProject => {
                 return Ok(AppState::SelectProject);
             }
+            InputEvent::Quit => {
+                disable_raw_mode()?;
+                std::process::exit(0);
+            }
             _ => {}
         }
         Ok(AppState::AskModel)
@@ -577,6 +587,10 @@ impl Legatio {
             }
             InputEvent::ChangeProject => {
                 return Ok(AppState::SelectProject);
+            }
+            InputEvent::Quit => {
+                disable_raw_mode()?;
+                std::process::exit(0);
             }
             _ => {}
         }

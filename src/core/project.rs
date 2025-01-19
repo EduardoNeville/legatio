@@ -77,7 +77,6 @@ pub fn build_select_project(projects: &[Project])-> (Vec<Line<'static>>, Vec<Str
             .last()
             .unwrap_or("")
         );
-        println!("proj_name: {}", proj_name.as_str());
         str_items.push(proj_name.to_owned());
         proj_items.push(Line::from(proj_name));
     }
