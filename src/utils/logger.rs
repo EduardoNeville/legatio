@@ -1,7 +1,6 @@
 use std::fs::{File, OpenOptions};
 use std::io::{self, Write};
 use std::sync::Mutex;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 // Global static variable for the log file, wrapped in an `Option<Mutex<File>>`
 static mut LOG_FILE: Option<Mutex<File>> = None;
@@ -22,19 +21,8 @@ pub fn initialize_logger(file_path: &str) -> io::Result<()> {
     Ok(())
 }
 
-/// Returns the current timestamp as a string in seconds.milliseconds format.
-fn current_timestamp() -> String {
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_else(|_| Default::default());
-    let seconds = now.as_secs();
-    let millis = now.subsec_millis();
-    format!("{}.{}", seconds, millis)
-}
-
 /// Logs a message to the log file with the given level (e.g., "INFO" or "ERROR").
 fn log_message(level: &str, message: &str) {
-    //let timestamp = current_timestamp();
     let log_message = format!("[{}] {}\n", level, message);
 
     // Access the global LOG_FILE and write to it

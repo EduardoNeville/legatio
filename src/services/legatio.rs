@@ -22,7 +22,11 @@ use std::io::prelude::*;
 use sqlx::{Result, SqlitePool};
 use crate::{
     core::{
-        project::{delete_project, get_projects, store_project},
+        project::{
+            delete_project, get_projects,
+            store_project,build_select_project,
+            format_project_title        
+        },
         prompt::{
             delete_prompt, get_prompts,
             store_prompt, prompt_chain,
@@ -37,12 +41,7 @@ use crate::{
         model::get_openai_response, 
         search::{item_selector, select_files}, 
         ui::{usr_scrolls, usr_prompts, usr_prompt_chain},
-        display::{
-            build_select_project,
-            format_project_title,
-            InputEvent,
-            AppState
-        }
+        display::{InputEvent, AppState}
     },
     utils::{structs::{Project, Prompt}, logger::log_info}
 };

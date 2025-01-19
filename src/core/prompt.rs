@@ -109,7 +109,7 @@ pub fn system_prompt(scrolls: &[Scroll])-> String {
     let system_prompt = scrolls.iter()
         .map(|scroll| {
             let scroll_name = scroll.scroll_path.rsplit('/').next().unwrap_or(""); // Handles empty paths safely
-            format!("```{:?}\n{:?}```\n", scroll_name, scroll.content)
+            format!("```{}\n{}```\n", scroll_name, scroll.content)
         })
         .collect::<Vec<_>>()
         .join(""); // Joining avoids intermediate allocations with push_str
@@ -143,14 +143,14 @@ pub fn prompt_chain(prompts: &[Prompt], prompt: &Prompt) -> Vec<Prompt> {
 }
 
 pub fn format_prompt(p: &Prompt)-> (String, String) {
-    let p_str = format!(" |- Prompt: {:?} ",
+    let p_str = format!(" |- Prompt: {} ",
         if p.content.chars().count() < 40 {
             p.content.replace('\n', " ").to_string()
         } else {
             p.content[0..40].replace('\n', " ").to_string()
         },
     );
-    let o_str = format!(" |- Output: {:?}",
+    let o_str = format!(" |- Output: {}",
         if p.output.chars().count() < 40 {
             p.output.replace('\n', " ").to_string()
         } else {
@@ -162,14 +162,14 @@ pub fn format_prompt(p: &Prompt)-> (String, String) {
 }
 
 pub fn format_prompt_depth(p: &Prompt, b_depth: &str)-> (String, String) {
-    let p_str = format!("{b_depth}> Prompt: {:?} ",
+    let p_str = format!("{b_depth}> Prompt: {} ",
         if p.content.chars().count() < 40 {
             p.content.replace('\n', " ").to_string()
         } else {
             p.content[0..40].replace('\n', " ").to_string()
         },
     );
-    let o_str = format!("{b_depth}> Output: {:?}",
+    let o_str = format!("{b_depth}> Output: {}",
         if p.output.chars().count() < 40 {
             p.output.replace('\n', " ").to_string()
         } else {
@@ -178,4 +178,206 @@ pub fn format_prompt_depth(p: &Prompt, b_depth: &str)-> (String, String) {
     );
 
     (p_str, o_str)
+}
+
+// &&&&&
+// Tests
+// &&&&&
+
+#[cfg(test)]
+mod tests {
+    use super::*; // Import functions from the `prompts.rs` file
+    use sqlx::sqlite::SqlitePoolOptions; // Required for testing functions involving the database
+    use crate::utils::structs::{Prompt, Scroll};
+
+    async fn create_test_pool() -> SqlitePool {
+        // Create a temporary in-memory SQLite database for testing
+        SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .expect("Failed to create database connection pool")
+    }
+
+    #[tokio::test]
+    async fn test_store_prompt() {
+        let pool = create_test_pool().await;
+
+        sqlx::query(
+            "CREATE TABLE prompts (
+                prompt_id TEXT PRIMARY KEY,
+                project_id TEXT,
+                prev_prompt_id TEXT,
+                content TEXT,
+                output TEXT
+            );",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let prompt = Prompt {
+            prompt_id: "test_prompt".to_string(),
+            project_id: "test_project".to_string(),
+            prev_prompt_id: "prev_test_prompt".to_string(),
+            content: "Test Prompt Content".to_string(),
+            output: "Test Prompt Output".to_string(),
+        };
+
+        let result = store_prompt(&pool, &prompt).await;
+        assert!(result.is_ok());
+
+        // Verify that the prompt was stored in the database
+        let stored_prompt: (String, String, String, String, String) = sqlx::query_as(
+            "SELECT prompt_id, project_id, prev_prompt_id, content, output FROM prompts"
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+
+        assert_eq!(stored_prompt.0, "test_prompt");
+        assert_eq!(stored_prompt.1, "test_project");
+        assert_eq!(stored_prompt.2, "prev_test_prompt");
+        assert_eq!(stored_prompt.3, "Test Prompt Content");
+        assert_eq!(stored_prompt.4, "Test Prompt Output");
+    }
+
+    #[tokio::test]
+    async fn test_get_prompts() {
+        let pool = create_test_pool().await;
+
+        sqlx::query(
+            "CREATE TABLE prompts (
+                prompt_id TEXT PRIMARY KEY,
+                project_id TEXT,
+                prev_prompt_id TEXT,
+                content TEXT,
+                output TEXT
+            );",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        sqlx::query(
+            "INSERT INTO prompts (prompt_id, project_id, prev_prompt_id, content, output) 
+            VALUES ('test_prompt', 'test_project', 'prev_test_prompt', 'Content', 'Output')",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let prompts = get_prompts(&pool, "test_project").await.unwrap();
+        assert_eq!(prompts.len(), 1);
+
+        let prompt = &prompts[0];
+        assert_eq!(prompt.prompt_id, "test_prompt");
+        assert_eq!(prompt.project_id, "test_project");
+        assert_eq!(prompt.prev_prompt_id, "prev_test_prompt");
+        assert_eq!(prompt.content, "Content");
+        assert_eq!(prompt.output, "Output");
+    }
+
+    #[tokio::test]
+    async fn test_update_prompt() {
+        let pool = create_test_pool().await;
+
+        sqlx::query(
+            "CREATE TABLE prompts (
+                prompt_id TEXT PRIMARY KEY,
+                project_id TEXT,
+                prev_prompt_id TEXT,
+                content TEXT,
+                output TEXT
+            );",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        sqlx::query(
+            "INSERT INTO prompts (prompt_id, project_id, prev_prompt_id, content, output) 
+            VALUES ('test_prompt', 'test_project', 'prev_test_prompt', 'Content', 'Output')",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let result = update_prompt(&pool, "content", "Updated Content", "prompt_id", "test_prompt").await;
+        assert!(result.is_ok());
+
+        let updated_prompt: String = sqlx::query_scalar(
+            "SELECT content FROM prompts WHERE prompt_id = 'test_prompt'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+
+        assert_eq!(updated_prompt, "Updated Content");
+    }
+
+    #[tokio::test]
+    async fn test_delete_prompt() {
+        let pool = create_test_pool().await;
+
+        sqlx::query(
+            "CREATE TABLE prompts (
+                prompt_id TEXT PRIMARY KEY,
+                project_id TEXT,
+                prev_prompt_id TEXT,
+                content TEXT,
+                output TEXT
+            );",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let prompt = Prompt {
+            prompt_id: "test_prompt".to_string(),
+            project_id: "test_project".to_string(),
+            prev_prompt_id: "prev_test_prompt".to_string(),
+            content: "Content".to_string(),
+            output: "Output".to_string(),
+        };
+
+        store_prompt(&pool, &prompt).await.unwrap();
+
+        let result = delete_prompt(&pool, &prompt).await;
+        assert!(result.is_ok());
+
+        let count: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM prompts WHERE prompt_id = 'test_prompt'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+
+        assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn test_system_prompt() {
+        let scrolls = vec![
+            Scroll {
+                project_id: "project-1".to_string(),
+                scroll_id: "scroll-1".to_string(),
+                scroll_path: "/path/to/scroll_one".to_string(),
+                content: "Scroll One Content".to_string(),
+            },
+            Scroll {
+                project_id: "project-2".to_string(),
+                scroll_id: "scroll-2".to_string(),
+                scroll_path: "/path/to/scroll_two".to_string(),
+                content: "Scroll Two Content".to_string(),
+            },
+        ];
+
+        let result = system_prompt(&scrolls);
+
+        assert!(result.contains("```"));
+        assert!(result.contains("scroll_one"));
+        assert!(result.contains("Scroll One Content"));
+        assert!(result.contains("scroll_two"));
+        assert!(result.contains("Scroll Two Content"));
+    }
 }
