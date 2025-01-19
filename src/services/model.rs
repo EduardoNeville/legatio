@@ -19,7 +19,7 @@ pub async fn get_openai_response(
     let client = OpenAIClient::builder().with_api_key(api_key).build().unwrap();
 
     let mut msgs = vec![];
-    if system_prompt.is_empty() {
+    if !system_prompt.is_empty() {
         msgs.push(
             ChatCompletionMessage {
                 role: chat_completion::MessageRole::system,
