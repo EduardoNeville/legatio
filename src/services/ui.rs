@@ -1,9 +1,13 @@
 use anyhow::{Ok, Result};
 use sqlx::SqlitePool;
 
-use crate::db::scroll::get_scrolls;
-use crate::utils::prompt_utils::{format_prompt, format_prompt_depth};
-use crate::utils::structs::{ Project, Prompt };
+use crate::{
+    core::{
+        scroll::get_scrolls,
+        prompt::{format_prompt, format_prompt_depth}
+    },
+    utils::structs::{Project, Prompt},
+};
 
 pub async fn usr_scrolls(pool: &SqlitePool, project: &Project) -> Result<Vec<String>> {
     let scrolls = get_scrolls(pool, &project.project_id).await.unwrap();

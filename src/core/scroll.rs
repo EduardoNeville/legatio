@@ -4,6 +4,7 @@ use anyhow::Result;
 use crate::utils::db_utils::delete_module;
 use crate::utils::structs::Scroll;
 use crate::utils::logger::{log_info, log_error};
+use std::fs;
 
 /// Inserts a scroll into the database.
 pub async fn store_scroll(pool: &SqlitePool, scroll: &Scroll) -> Result<()> {
@@ -66,10 +67,15 @@ pub async fn get_scrolls(pool: &SqlitePool, project_id: &str)-> Result<Vec<Scrol
 }
 
 pub async fn delete_scroll(pool: &SqlitePool, scroll_id: &str) -> Result<()> {
-
     delete_module(pool, &"scrolls", &"scroll_id", scroll_id)
         .await
         .expect("Error in scroll deletion");
 
     Ok(())
 }
+
+pub fn read_file(file_path: &str, project_id: &str) -> Result<Scroll> {
+    let content = fs::read_to_string(file_path)?;
+    Ok(Scroll::new(file_path, &content, project_id))
+}
+

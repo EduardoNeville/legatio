@@ -1,6 +1,4 @@
-use ratatui::text::Line;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
-use crate::utils::structs::Project;
 
 #[derive(Clone, Copy)]
 pub enum AppState {
@@ -77,26 +75,5 @@ impl From<KeyEvent> for InputEvent {
             _ => InputEvent::NoOp,
         }
     }
-}
-
-pub fn format_project_title(current_project: &Option<Project>) -> String {
-    match current_project {
-        Some(project) => format!(
-            "[ Current Project: {} ]",
-            project.project_path.split('/').last().unwrap_or("")
-        ),
-        None => "[ Projects ]".to_string(),
-    }
-}
-
-pub fn build_select_project(projects: &[Project])-> (Vec<Line<'static>>, Vec<String>) {
-    let mut proj_items: Vec<Line> = vec![];
-    let mut str_items: Vec<String> = vec![];
-    for project in projects.iter() {
-        let proj_name = format!(" -[ {:?} ]-", project.project_path.split('/').last().unwrap_or(""));
-        str_items.push(proj_name.to_owned());
-        proj_items.push(Line::from(proj_name));
-    }
-    return (proj_items, str_items)
 }
 

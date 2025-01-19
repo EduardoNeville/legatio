@@ -20,13 +20,18 @@ use std::{io, vec};
 use std::io::prelude::*;
 
 use sqlx::{Result, SqlitePool};
-use crate::utils::logger::log_info;
-use crate::utils::prompt_utils::prompt_chain;
 use crate::{
-    db::{
+    core::{
         project::{delete_project, get_projects, store_project},
-        prompt::{delete_prompt, get_prompts, store_prompt},
-        scroll::{delete_scroll, get_scrolls, store_scroll}
+        prompt::{
+            delete_prompt, get_prompts,
+            store_prompt, prompt_chain,
+            format_prompt, system_prompt
+        },
+        scroll::{
+            delete_scroll, get_scrolls,
+            store_scroll, read_file
+        }
     },
     services::{
         model::get_openai_response, 
@@ -39,11 +44,7 @@ use crate::{
             AppState
         }
     },
-    utils::{
-        file_utils::read_file, 
-        prompt_utils::{format_prompt, system_prompt},
-        structs::{Project, Prompt}
-    }
+    utils::{structs::{Project, Prompt}, logger::log_info}
 };
 
 pub struct Legatio {
