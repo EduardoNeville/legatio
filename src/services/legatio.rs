@@ -9,15 +9,10 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode},
 };
 
-use std::fs::File;
+use std::fs::{self, File};
 use std::time::Duration;
-use std::{
-    fs::{self, OpenOptions},
-    path::PathBuf
-};
-
+use std::path::PathBuf;
 use std::{io, vec};
-use std::io::prelude::*;
 
 use anyhow::Result;
 use sqlx::SqlitePool;
@@ -428,15 +423,14 @@ impl Legatio {
                                     Some(p) => Some(p.to_owned()),
                                     _ => None,
                                 };
-                                if let Some(curr_prompt) = &self.current_prompt {
-                                    chain_into_canvas(
-                                        project,
-                                        &prompts,
-                                        curr_prompt
-                                    ).unwrap();
-                                }
+                                chain_into_canvas(
+                                    project,
+                                    Some(&prompts),
+                                    self.current_prompt.as_ref()
+                                ).unwrap();
                             } else {
                                 self.current_prompt = None;
+                                chain_into_canvas(project, None, None).unwrap();
                             }
                         } else {
                             enable_raw_mode()?;
@@ -504,16 +498,15 @@ impl Legatio {
                     let sys_prompt = system_prompt(&scrolls);
 
                     let prompts = get_prompts(pool, &project.project_id).await.unwrap();
-                    let mut final_prompt = String::new();
+
+                    let mut chain: Option<Vec<Prompt>> = None;
                     if let Some(curr_prompt) = &self.current_prompt {
-                        final_prompt = chain_match_canvas(
-                            project,
-                            &prompts,
-                            curr_prompt
-                        ).unwrap();
+                        chain = Some(prompt_chain(&prompts, curr_prompt));
                     }
 
-                    let output = get_openai_response(&sys_prompt, Some(prompts.clone()), &final_prompt)
+                    let final_prompt = chain_match_canvas(project).unwrap();
+
+                    let output = get_openai_response(&sys_prompt, chain, &final_prompt)
                         .await
                         .unwrap();
 
@@ -526,13 +519,14 @@ impl Legatio {
                             .map_or(project.project_id.clone(), |p| p.prompt_id.clone()),
                     );
 
-                    chain_into_canvas(
-                        project,
-                        &prompts,
-                        &new_prompt
-                    ).unwrap();
                     store_prompt(pool, &new_prompt).await.unwrap();
                     self.current_prompt = Some(new_prompt);
+
+                    chain_into_canvas(
+                        project,
+                        Some(&prompts),
+                        self.current_prompt.as_ref()
+                    ).unwrap();
                 }
             }
             InputEvent::SwitchBranch => {
