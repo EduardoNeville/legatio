@@ -126,7 +126,7 @@ impl Legatio {
             }
             AppState::SelectPrompt => {
                 top_text = vec![
-                    Line::from("[s]: Select Prompt"),
+                    Line::from("[b]: Select Prompt"),
                     Line::from("[d]: Delete Prompt"),
                     Line::from("[e]: Edit Scrolls"),
                     Line::from("[p]: Change Project"),
@@ -578,13 +578,18 @@ impl Legatio {
                     disable_raw_mode()?;
                     if let Some(selected_scroll) = item_selector(scroll_names.clone()).unwrap() {
                         enable_raw_mode()?;
-                        let index = scroll_names
+                        let mut idx = scroll_names
                             .iter()
                             .position(|s| s == &selected_scroll)
                             .unwrap();
-                        delete_scroll(pool, &scrolls[index].scroll_id)
-                            .await
-                            .unwrap();
+
+                        if idx < scrolls.len() {
+                            idx = scrolls.len() - 1 - idx;
+
+                            delete_scroll(pool, &scrolls[idx].scroll_id)
+                                .await
+                                .unwrap();
+                        }
                     } else {
                         enable_raw_mode()?;
                         return Ok(AppState::EditScrolls);

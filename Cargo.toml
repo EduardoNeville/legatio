@@ -15,7 +15,7 @@ debug = false
 tokio = { version = "1.20.0", features = ["macros"]} # "full"
 
 # Database
-sqlx = { version = "0.6.2", features = ["runtime-tokio-native-tls", "sqlite"]} # "macros"
+sqlx = { version = "0.8.1", features = ["runtime-tokio-native-tls", "sqlite"]} # "macros"
 
 # HTTP client
 reqwest = { version = "^0.12.9", default-features = false, features = ["json"] }
