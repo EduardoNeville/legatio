@@ -367,7 +367,11 @@ impl Legatio {
                 if !projects.is_empty() {
                     let (_, str_names) = build_select_project(&projects);
                     if let Some(selected_project) = item_selector(str_names.clone()).unwrap() {
-                        let sel_idx = str_names.iter().position(|p| *p == selected_project).unwrap();
+                        let sel_idx = str_names
+                            .iter()
+                            .position(|p| *p == selected_project)
+                            .unwrap();
+
                         delete_project(pool, &projects[sel_idx].project_id)
                             .await
                             .unwrap();
@@ -578,14 +582,12 @@ impl Legatio {
                     disable_raw_mode()?;
                     if let Some(selected_scroll) = item_selector(scroll_names.clone()).unwrap() {
                         enable_raw_mode()?;
-                        let mut idx = scroll_names
+                        let idx = scroll_names
                             .iter()
                             .position(|s| s == &selected_scroll)
                             .unwrap();
 
                         if idx < scrolls.len() {
-                            idx = scrolls.len() - 1 - idx;
-
                             delete_scroll(pool, &scrolls[idx].scroll_id)
                                 .await
                                 .unwrap();
