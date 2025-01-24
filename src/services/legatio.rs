@@ -127,7 +127,7 @@ impl Legatio {
             }
             AppState::SelectPrompt => {
                 top_text = vec![
-                    Line::from("[b]: Select Prompt"),
+                    Line::from("[s]: Select Prompt"),
                     Line::from("[d]: Delete Prompt"),
                     Line::from("[e]: Edit Scrolls"),
                     Line::from("[p]: Change Project"),

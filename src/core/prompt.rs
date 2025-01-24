@@ -144,7 +144,7 @@ pub fn prompt_chain(prompts: &[Prompt], prompt: &Prompt) -> Vec<Prompt> {
 }
 
 pub fn format_prompt(p: &Prompt)-> (String, String) {
-    let p_str = format!(" |- Prompt: {} ",
+    let p_str = format!(" |- Prompt: {}",
         if p.content.chars().count() < 40 {
             p.content.replace('\n', " ").to_string()
         } else {
@@ -152,7 +152,7 @@ pub fn format_prompt(p: &Prompt)-> (String, String) {
         },
     );
 
-    let o_str = format!(" |- Output: {}",
+    let o_str = format!(" |  Output: {}",
         if p.output.chars().count() < 40 {
             p.output.replace('\n', " ").to_string()
         } else {
@@ -164,7 +164,7 @@ pub fn format_prompt(p: &Prompt)-> (String, String) {
 }
 
 pub fn format_prompt_depth(p: &Prompt, b_depth: &str)-> (String, String) {
-    let p_str = format!("{b_depth}> Prompt: {} ",
+    let p_str = format!("{b_depth}> Prompt: {}",
         if p.content.chars().count() < 40 {
             p.content.replace('\n', " ").to_string()
         } else {
