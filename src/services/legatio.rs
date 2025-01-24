@@ -17,6 +17,7 @@ use std::{io, vec};
 use anyhow::Result;
 use sqlx::SqlitePool;
 use crate::core::canvas::{chain_into_canvas, chain_match_canvas};
+use crate::core::scroll::update_scroll_content;
 use crate::{
     core::{
         project::{
@@ -499,7 +500,12 @@ impl Legatio {
             InputEvent::AskModel => {
                 if let Some(project) = &self.current_project {
                     let scrolls = get_scrolls(pool, &project.project_id).await.unwrap();
-                    let sys_prompt = system_prompt(&scrolls);
+                    let mut new_scrolls = vec![];
+                    for scroll in scrolls.iter() {
+                        let new_scroll = update_scroll_content(pool, scroll).await.unwrap();
+                        new_scrolls.push(new_scroll);
+                    }
+                    let sys_prompt = system_prompt(&new_scrolls).await;
 
                     let prompts = get_prompts(pool, &project.project_id).await.unwrap();
 
@@ -569,7 +575,7 @@ impl Legatio {
                     disable_raw_mode()?;
                     let selected_scrolls = select_files(Some(&project.project_path)).unwrap();
                     enable_raw_mode()?;
-                    let new_scroll = read_file(&selected_scrolls, &project.project_id).unwrap();
+                    let new_scroll = read_file(&selected_scrolls, &project.project_id, None).unwrap();
                     store_scroll(pool, &new_scroll).await.unwrap();
                 }
                 return Ok(AppState::EditScrolls);

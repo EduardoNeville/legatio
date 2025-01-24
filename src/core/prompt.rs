@@ -1,12 +1,13 @@
 use sqlx::sqlite::SqlitePool;
 use anyhow::{Ok, Result};
 use std::collections::HashMap;
-use crate::utils::{
-    db_utils::delete_module,
-    logger::log_error,
-    structs::{Scroll, Prompt}
+use crate::{
+    utils::{
+        db_utils::delete_module,
+        logger::log_error,
+        structs::{Prompt, Scroll}
+    }
 };
-
 
 /// Stores a prompt into the database.
 pub async fn store_prompt(pool: &SqlitePool, prompt: &Prompt) -> Result<()> {
@@ -105,15 +106,15 @@ pub async fn delete_prompt(
     Ok(())
 }
 
-pub fn system_prompt(scrolls: &[Scroll])-> String {
-    let system_prompt = scrolls.iter()
-        .map(|scroll| {
-            let scroll_name = scroll.scroll_path.rsplit('/').next().unwrap_or(""); // Handles empty paths safely
-            format!("```{}\n{}```\n", scroll_name, scroll.content)
-        })
-        .collect::<Vec<_>>()
-        .join(""); // Joining avoids intermediate allocations with push_str
-    
+pub async fn system_prompt(scrolls: &[Scroll])-> String {
+    let mut system_prompt = String::new();
+
+    for scroll in scrolls.iter() {
+        let scroll_name = scroll.scroll_path.rsplit('/').next().unwrap_or(""); // Handles empty paths safely
+
+        system_prompt.push_str(&format!("```{}\n{}```\n", scroll_name, scroll.content));
+    }
+   
     return system_prompt
 }
 
@@ -150,6 +151,7 @@ pub fn format_prompt(p: &Prompt)-> (String, String) {
             p.content[0..40].replace('\n', " ").to_string()
         },
     );
+
     let o_str = format!(" |- Output: {}",
         if p.output.chars().count() < 40 {
             p.output.replace('\n', " ").to_string()
@@ -169,6 +171,7 @@ pub fn format_prompt_depth(p: &Prompt, b_depth: &str)-> (String, String) {
             p.content[0..40].replace('\n', " ").to_string()
         },
     );
+
     let o_str = format!("{b_depth}> Output: {}",
         if p.output.chars().count() < 40 {
             p.output.replace('\n', " ").to_string()
@@ -186,7 +189,7 @@ pub fn format_prompt_depth(p: &Prompt, b_depth: &str)-> (String, String) {
 
 #[cfg(test)]
 mod tests {
-    use super::*; // Import functions from the `prompts.rs` file
+    use super::*; // Import functions from `prompts.rs`
     use sqlx::sqlite::SqlitePoolOptions; // Required for testing functions involving the database
     use crate::utils::structs::{Prompt, Scroll};
 
@@ -355,29 +358,64 @@ mod tests {
         assert_eq!(count, 0);
     }
 
-    #[test]
-    fn test_system_prompt() {
+    #[tokio::test]
+    async fn test_system_prompt() {
         let scrolls = vec![
             Scroll {
-                project_id: "project-1".to_string(),
-                scroll_id: "scroll-1".to_string(),
-                scroll_path: "/path/to/scroll_one".to_string(),
-                content: "Scroll One Content".to_string(),
+                project_id: "project_1".to_string(),
+                scroll_id: "scroll_1".to_string(),
+                scroll_path: "/path/to/scroll_1".to_string(),
+                content: "Content for Scroll 1".to_string(),
             },
             Scroll {
-                project_id: "project-2".to_string(),
-                scroll_id: "scroll-2".to_string(),
-                scroll_path: "/path/to/scroll_two".to_string(),
-                content: "Scroll Two Content".to_string(),
+                project_id: "project_2".to_string(),
+                scroll_id: "scroll_2".to_string(),
+                scroll_path: "/path/to/scroll_2".to_string(),
+                content: "Content for Scroll 2".to_string(),
             },
         ];
 
-        let result = system_prompt(&scrolls);
+        let result = system_prompt(&scrolls).await;
 
         assert!(result.contains("```"));
-        assert!(result.contains("scroll_one"));
-        assert!(result.contains("Scroll One Content"));
-        assert!(result.contains("scroll_two"));
-        assert!(result.contains("Scroll Two Content"));
+        assert!(result.contains("scroll_1"));
+        assert!(result.contains("Content for Scroll 1"));
+        assert!(result.contains("scroll_2"));
+        assert!(result.contains("Content for Scroll 2"));
+    }
+
+    #[test]
+    fn test_prompt_chain() {
+        let prompt1 = Prompt {
+            prompt_id: "1".to_string(),
+            project_id: "project".to_string(),
+            prev_prompt_id: "".to_string(),
+            content: "Prompt 1".to_string(),
+            output: "Output 1".to_string(),
+        };
+
+        let prompt2 = Prompt {
+            prompt_id: "2".to_string(),
+            project_id: "project".to_string(),
+            prev_prompt_id: "1".to_string(),
+            content: "Prompt 2".to_string(),
+            output: "Output 2".to_string(),
+        };
+
+        let prompt3 = Prompt {
+            prompt_id: "3".to_string(),
+            project_id: "project".to_string(),
+            prev_prompt_id: "2".to_string(),
+            content: "Prompt 3".to_string(),
+            output: "Output 3".to_string(),
+        };
+
+        let prompts = vec![prompt1.clone(), prompt2.clone(), prompt3.clone()];
+
+        let chain = prompt_chain(&prompts, &prompt3);
+        assert_eq!(chain.len(), 3);
+        assert_eq!(chain[0].prompt_id, "3");
+        assert_eq!(chain[1].prompt_id, "2");
+        assert_eq!(chain[2].prompt_id, "1");
     }
 }
