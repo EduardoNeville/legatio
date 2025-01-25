@@ -27,6 +27,10 @@ serde_json = "1.0"
 # Error handling
 anyhow = "1.0"
 
+# Testing
+tempfile = "3.15.0"
+
+
 # Search
 ignore = "0.4.23"
 nucleo-picker = "0.8.0"
