@@ -349,7 +349,7 @@ impl Legatio {
                         return Ok(AppState::SelectProject);
                     }
                 } else {
-                    let selected_dir = select_files(None).unwrap();
+                    let selected_dir = select_files(None).unwrap().unwrap();
                     let project = Project::new(&selected_dir);
                     store_project(pool, &project).await.unwrap();
                     self.current_project = Some(project.clone());
@@ -357,7 +357,7 @@ impl Legatio {
                 }
             }
             InputEvent::New => {
-                let selected_dir = select_files(None).unwrap();
+                let selected_dir = select_files(None).unwrap().unwrap();
                 let project = Project::new(&selected_dir);
                 store_project(pool, &project).await.unwrap();
                 self.current_project = Some(project.clone());
@@ -573,7 +573,7 @@ impl Legatio {
             InputEvent::New => {
                 if let Some(project) = &self.current_project {
                     disable_raw_mode()?;
-                    let selected_scrolls = select_files(Some(&project.project_path)).unwrap();
+                    let selected_scrolls = select_files(Some(&project.project_path)).unwrap().unwrap();
                     enable_raw_mode()?;
                     let new_scroll = read_file(&selected_scrolls, &project.project_id, None).unwrap();
                     store_scroll(pool, &new_scroll).await.unwrap();

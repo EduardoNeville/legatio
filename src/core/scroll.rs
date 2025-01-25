@@ -1,6 +1,7 @@
 use sqlx::sqlite::SqlitePool;
 use anyhow::Result;
 use crate::utils::db_utils::delete_module;
+use crate::utils::error::AppError;
 use crate::utils::structs::Scroll;
 use crate::utils::logger::log_error;
 use std::fs;
@@ -46,34 +47,31 @@ pub async fn delete_scroll(pool: &SqlitePool, scroll_id: &str) -> Result<()> {
 }
 
 pub async fn update_scroll_content(pool: &SqlitePool, scroll: &Scroll) -> Result<Scroll> {
+    let new_scroll = read_file(&scroll.scroll_path, &scroll.project_id, Some(scroll))
+        .map_err(|err| {
+            AppError::FileError(format!(
+                "Failed to read file '{}': {}",
+                scroll.scroll_path, err
+            ))
+        })?;
 
-    // Use `read_file` to get the updated scroll
-    let new_scroll = read_file(
-        &scroll.scroll_path,
-        &scroll.project_id,
-        Some(scroll),
-    )?;
-
-    // Update the database to reflect the new scroll content
-    if let Err(error) = sqlx::query(
+    sqlx::query(
         "UPDATE scrolls
          SET content = $1
          WHERE scroll_id = $2",
     )
     .bind(&new_scroll.content) // Bind new content
-    .bind(&new_scroll.scroll_id) // Use the scroll ID for the update
+    .bind(&new_scroll.scroll_id) // Use the scroll ID to locate record
     .execute(pool)
     .await
-    {
+    .map_err(|err| {
         log_error(&format!(
-            "FAILED :: UPDATE scroll SET content = {} WHERE scroll_id = {}",
-            &new_scroll.content,
-            &new_scroll.scroll_id,
+            "FAILED :: UPDATE scroll_id: {}, error: {}",
+            new_scroll.scroll_id, err
         ));
-        return Err(error.into());
-    }
+        AppError::DatabaseError(format!("Failed to update scroll: {}. Reason: {}", scroll.scroll_id, err))
+    })?;
 
-    // Return the updated scroll to the caller
     Ok(new_scroll)
 }
 

@@ -1,18 +1,14 @@
 use sqlx::sqlite::SqlitePool;
 use anyhow::{Ok, Result};
 use std::collections::HashMap;
-use crate::{
-    utils::{
-        db_utils::delete_module,
-        logger::log_error,
-        structs::{Prompt, Scroll}
-    }
-};
+use crate::utils::{
+        db_utils::delete_module, error::AppError, logger::log_error, structs::{Prompt, Scroll}
+    };
 
 /// Stores a prompt into the database.
 pub async fn store_prompt(pool: &SqlitePool, prompt: &Prompt) -> Result<()> {
     // Use RETURNING clause (if supported by SQLite) to fetch the `prompt_id`.
-    if let Err(error) = sqlx::query(
+    sqlx::query(
         "INSERT INTO prompts (prompt_id, project_id, prev_prompt_id, content, output) 
          VALUES ($1, $2, $3, $4, $5)")
     .bind(&prompt.prompt_id)
@@ -22,12 +18,16 @@ pub async fn store_prompt(pool: &SqlitePool, prompt: &Prompt) -> Result<()> {
     .bind(&prompt.output)
     .execute(pool)
     .await 
-    {
-        log_error(&format!("FAILED :: INSERT prompt_id: [{}]", 
-            prompt.prompt_id,
+    .map_err(|err| {
+        log_error(&format!(
+            "FAILED :: INSERT prompt_id = {}, error: {}",
+            prompt.prompt_id, err
         ));
-        return Err(error.into());
-    }
+        AppError::DatabaseError(format!(
+            "Failed to store prompt with ID {}. Reason: {}",
+            prompt.prompt_id, err
+        ))
+    })?;
 
     Ok(())
 }
@@ -58,12 +58,12 @@ pub async fn update_prompt(
         &col_comp_name,
     );
 
-    if let Err(error) = sqlx::query(&query)
-        .bind(&new_value)
-        .bind(&col_comp_val)
-        .execute(pool)
-        .await
-    {
+    sqlx::query(&query)
+    .bind(&new_value)
+    .bind(&col_comp_val)
+    .execute(pool)
+    .await
+    .map_err(|err| {
         log_error(&format!(
             "FAILED :: UPDATE prompts SET {} = {} WHERE {} = {}",
             &col_set_name,
@@ -71,8 +71,15 @@ pub async fn update_prompt(
             &col_comp_name,
             &col_comp_val
         ));
-        return Err(error.into());
-    }
+        AppError::DatabaseError(format!(
+            "FAILED :: UPDATE prompts SET {} = {} WHERE {} = {} \n {}",
+            &col_set_name,
+            &new_value,
+            &col_comp_name,
+            &col_comp_val,
+            err
+        ))
+    })?;
     Ok(())
 }
 
