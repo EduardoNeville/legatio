@@ -9,18 +9,15 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode},
 };
 
-use std::fs::File;
+use std::fs::{self, File};
 use std::time::Duration;
-use std::{
-    fs::{self, OpenOptions},
-    path::PathBuf
-};
-
+use std::path::PathBuf;
 use std::{io, vec};
-use std::io::prelude::*;
 
 use anyhow::Result;
 use sqlx::SqlitePool;
+use crate::core::canvas::{chain_into_canvas, chain_match_canvas};
+use crate::core::scroll::update_scroll_content;
 use crate::{
     core::{
         project::{
@@ -352,7 +349,7 @@ impl Legatio {
                         return Ok(AppState::SelectProject);
                     }
                 } else {
-                    let selected_dir = select_files(None).unwrap();
+                    let selected_dir = select_files(None).unwrap().unwrap();
                     let project = Project::new(&selected_dir);
                     store_project(pool, &project).await.unwrap();
                     self.current_project = Some(project.clone());
@@ -360,7 +357,7 @@ impl Legatio {
                 }
             }
             InputEvent::New => {
-                let selected_dir = select_files(None).unwrap();
+                let selected_dir = select_files(None).unwrap().unwrap();
                 let project = Project::new(&selected_dir);
                 store_project(pool, &project).await.unwrap();
                 self.current_project = Some(project.clone());
@@ -371,7 +368,11 @@ impl Legatio {
                 if !projects.is_empty() {
                     let (_, str_names) = build_select_project(&projects);
                     if let Some(selected_project) = item_selector(str_names.clone()).unwrap() {
-                        let sel_idx = str_names.iter().position(|p| *p == selected_project).unwrap();
+                        let sel_idx = str_names
+                            .iter()
+                            .position(|p| *p == selected_project)
+                            .unwrap();
+
                         delete_project(pool, &projects[sel_idx].project_id)
                             .await
                             .unwrap();
@@ -427,8 +428,14 @@ impl Legatio {
                                     Some(p) => Some(p.to_owned()),
                                     _ => None,
                                 };
+                                chain_into_canvas(
+                                    project,
+                                    Some(&prompts),
+                                    self.current_prompt.as_ref()
+                                ).unwrap();
                             } else {
                                 self.current_prompt = None;
+                                chain_into_canvas(project, None, None).unwrap();
                             }
                         } else {
                             enable_raw_mode()?;
@@ -493,27 +500,27 @@ impl Legatio {
             InputEvent::AskModel => {
                 if let Some(project) = &self.current_project {
                     let scrolls = get_scrolls(pool, &project.project_id).await.unwrap();
-                    let sys_prompt = system_prompt(&scrolls);
+                    let mut new_scrolls = vec![];
+                    for scroll in scrolls.iter() {
+                        let new_scroll = update_scroll_content(pool, scroll).await.unwrap();
+                        new_scrolls.push(new_scroll);
+                    }
+                    let sys_prompt = system_prompt(&new_scrolls).await;
 
                     let prompts = get_prompts(pool, &project.project_id).await.unwrap();
-                    let final_prompt = fs::read_to_string(
-                        &PathBuf::from(&project.project_path).join("legatio.md"),
-                    )
-                    .unwrap_or_default();
 
-                    let output = get_openai_response(&sys_prompt, Some(prompts.clone()), &final_prompt)
+                    let mut chain: Option<Vec<Prompt>> = None;
+                    if let Some(curr_prompt) = &self.current_prompt {
+                        chain = Some(prompt_chain(&prompts, curr_prompt));
+                    }
+                    log_info(&format!("Curr prompt: {:?}", self.current_prompt.as_ref()));
+
+                    let final_prompt = chain_match_canvas(project).unwrap();
+                    log_info(&format!("Question: {}", final_prompt));
+
+                    let output = get_openai_response(&sys_prompt, chain, &final_prompt)
                         .await
                         .unwrap();
-
-                    // Append the response to the "legatio.md" file
-                    let mut file = OpenOptions::new()
-                        .write(true)
-                        .append(true)
-                        .open(&PathBuf::from(&project.project_path).join("legatio.md"))
-                        .unwrap();
-
-                    let content = format!("\n---\nAnswer:\n{}", output);
-                    writeln!(file, "{}", content).unwrap();
 
                     let new_prompt = Prompt::new(
                         &project.project_id,
@@ -523,8 +530,19 @@ impl Legatio {
                             .as_ref()
                             .map_or(project.project_id.clone(), |p| p.prompt_id.clone()),
                     );
+
                     store_prompt(pool, &new_prompt).await.unwrap();
                     self.current_prompt = Some(new_prompt);
+
+                    log_info(&format!("New prompt: {:?}", self.current_prompt.as_ref()));
+                    let mut new_prompts = prompts.clone();
+                    new_prompts.push(self.current_prompt.as_ref().unwrap().clone());
+
+                    chain_into_canvas(
+                        project,
+                        Some(&new_prompts),
+                        self.current_prompt.as_ref()
+                    ).unwrap();
                 }
             }
             InputEvent::SwitchBranch => {
@@ -555,9 +573,9 @@ impl Legatio {
             InputEvent::New => {
                 if let Some(project) = &self.current_project {
                     disable_raw_mode()?;
-                    let selected_scrolls = select_files(Some(&project.project_path)).unwrap();
+                    let selected_scrolls = select_files(Some(&project.project_path)).unwrap().unwrap();
                     enable_raw_mode()?;
-                    let new_scroll = read_file(&selected_scrolls, &project.project_id).unwrap();
+                    let new_scroll = read_file(&selected_scrolls, &project.project_id, None).unwrap();
                     store_scroll(pool, &new_scroll).await.unwrap();
                 }
                 return Ok(AppState::EditScrolls);
@@ -570,13 +588,16 @@ impl Legatio {
                     disable_raw_mode()?;
                     if let Some(selected_scroll) = item_selector(scroll_names.clone()).unwrap() {
                         enable_raw_mode()?;
-                        let index = scroll_names
+                        let idx = scroll_names
                             .iter()
                             .position(|s| s == &selected_scroll)
                             .unwrap();
-                        delete_scroll(pool, &scrolls[index].scroll_id)
-                            .await
-                            .unwrap();
+
+                        if idx < scrolls.len() {
+                            delete_scroll(pool, &scrolls[idx].scroll_id)
+                                .await
+                                .unwrap();
+                        }
                     } else {
                         enable_raw_mode()?;
                         return Ok(AppState::EditScrolls);

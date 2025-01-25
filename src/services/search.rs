@@ -10,6 +10,8 @@ use nucleo_picker::{
     render::StrRenderer
 };
 
+use crate::utils::error::{AppError, Result as AppResult};
+
 pub struct DirEntryRender;
 
 impl Render<DirEntry> for DirEntryRender {
@@ -21,8 +23,8 @@ impl Render<DirEntry> for DirEntryRender {
     }
 }
 
-pub fn select_files(dir_path: Option<&str>) -> Result<String> {
-    disable_raw_mode()?;
+pub fn select_files(dir_path: Option<&str>) -> AppResult<Option<String>> {
+    disable_raw_mode().map_err(|_| AppError::UnexpectedError("Failed to disable raw mode".into()))?;
     let mut picker = PickerOptions::default()
         // See the nucleo configuration for more options:
         //   https://docs.rs/nucleo/latest/nucleo/struct.Config.html
@@ -31,10 +33,9 @@ pub fn select_files(dir_path: Option<&str>) -> Result<String> {
         .picker(DirEntryRender);
 
     // "argument parsing"
-    let root: PathBuf = match dir_path {
-        Some(path) => path.into(),
-        None => "/home/".into() // TODO $HOME ??
-    };
+    let root: PathBuf = dir_path
+        .map(Into::into)
+        .unwrap_or_else(|| "/home/".into());
 
     // populate from a separate thread to avoid locking the picker interface
     let injector = picker.injector();
@@ -42,39 +43,44 @@ pub fn select_files(dir_path: Option<&str>) -> Result<String> {
         WalkBuilder::new(root).build_parallel().run(|| {
             let injector = injector.clone();
             Box::new(move |walk_res| {
-                if let Ok(dir) = walk_res {
-                    injector.push(dir);
+                match walk_res {
+                    Ok(dir) => injector.push(dir),
+                    Err(err) => {
+                        // Log the error or handle it appropriately
+                        eprintln!("Error during directory walk: {}", err);
+                    }
                 }
                 WalkState::Continue
             })
         });
     });
 
-    let file: Option<String> = picker.pick()?
+    let file: Option<String> = picker.pick()
+        .map_err(|_| AppError::UnexpectedError("Picker failed to pick a file".into()))?
         .map(|entry| entry.path().display().to_string());
 
-    enable_raw_mode()?;
-    Ok(file.unwrap())
+    enable_raw_mode().map_err(|_| AppError::UnexpectedError("Failed to enable raw mode".into()))?;
+    Ok(file)
 }
 
-pub fn item_selector(items: Vec<String>) -> Result<Option<String>> {
-    disable_raw_mode()?;
+pub fn item_selector(items: Vec<String>) -> AppResult<Option<String>> {
+    disable_raw_mode().map_err(|_| AppError::UnexpectedError("Failed to disable raw mode".into()))?;
+
     let mut picker = PickerOptions::default()
-        // set the configuration to match 'path-like' objects
         .config(Config::DEFAULT.match_paths())
         .picker(StrRenderer);
 
-    // populate the matcher
     let injector = picker.injector();
     for item in items {
         injector.push(item);
     }
 
-    // open interactive prompt
-    let sel_item: Option<String> = picker.pick()?
+    let sel_item: Option<String> = picker.pick()
+        .map_err(|_| AppError::UnexpectedError("Picker failed to pick an item".into()))?
         .map(|opt| opt.to_string());
 
-    enable_raw_mode()?;
+    enable_raw_mode().map_err(|_| AppError::UnexpectedError("Failed to enable raw mode".into()))?;
+
     Ok(sel_item)
 }
 

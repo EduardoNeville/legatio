@@ -1,170 +1,179 @@
-# Legatio
+# **Legatio: Collaborative AI Text Assistant**
 
-## Overview
+Legatio is a feature-rich, extensible, and user-centric tool for collaborative text editing, project branching, and AI-powered assistance. Designed with a focus on productivity and seamless user interaction, Legatio integrates a minimalist UI, project and prompt management, and advanced AI models (like OpenAI's GPT) to help users create, manage, and enhance their projects effectively.
 
-**Legatio** is a robust project-driven terminal tool aimed at streamlining workflows for developers, content creators, and AI enthusiasts. It leverages SQLite as the database backend and integrates seamlessly with OpenAI's API for prompt-based model interactions. Legatio is designed to manage projects, prompts, and artifacts like "scrolls" within an organized environment, enabling efficient collaboration and high-quality outputs.
-
-Whether you're brainstorming creative ideas, building a knowledge repository, or working on a software project, **Legatio** is designed to keep everything in one place while giving you complete control over interactions with language models and your filesystem.
+This documentation will provide you with a thorough walkthrough of what Legatio does, how to set it up, and how to use its key features, such as managing `.md` files (Markdown), branching projects, and working with files.
 
 ---
 
-## Features
-- **Project Management**: Organize your work into specific projects, each containing editable prompts and scrolls.
-- **Prompt Interaction**: Chain prompts, view histories, and engage with OpenAI models efficiently.
-- **Scroll Integration**: Append or remove scrolls as resources for AI context.
-- **Versioned Workflows**: Save, edit, and reuse model interactions to build a scalable history of your work.
-- **Dynamic Interface**: Provides a terminal-based UI for navigation and seamless experience.
-  
----
+## **Features**
 
-## Prerequisites
-1. **Rust**: Ensure you have Rust installed. If not, download and install it from [Rust's official website](https://www.rust-lang.org/).
-2. **SQLite**: No separate installation is required for SQLite; this project uses the `sqlx` crate.
-3. **OpenAI API Key**: The project interacts with OpenAI's API. Obtain your API key from the [OpenAI Dashboard](https://platform.openai.com/signup).
+- **Project Management**: Organize your workflow using projects that represent isolated tasks, topics, or objectives.
+- **Prompt Storage & Chaining**: Store and chain AI-generated prompts together in an orderly manner.
+- **`.md` File Integration**: Use a `legatio.md` file for keeping track of your session, generating new content, and interacting with the AI.
+- **Branching Mechanism**: Work on different "branches" within the project, enabling isolated pipelines of thought and experimentation.
+- **Scroll Management**: Attach related files (referred to as "scrolls") to a project for context and enrich your AI interactions.
+- **Interactive Terminal UI**: A clean, TUI (Terminal User Interface) experience built with `ratatui`.
 
 ---
 
-## Installation
+## **Getting Started**
 
-### 1. Clone the Repository
-```bash
-git clone https://github.com/your_username/legatio.git
-cd legatio
-```
+### **Prerequisites**
+1. Rust installed on your machine. You can install Rust via Rustup by following the instructions [here](https://www.rust-lang.org/tools/install).
+2. OpenAI API Key. Sign up [here](https://platform.openai.com/signup) if you don't already have an API Key.
+3. An OpenAI-enabled account with permission to use GPT-based models.
 
-### 2. Environment Configuration
-Create a `.env` file in the project root directory and add the following environment variables:
-```
-# File: .env
-OPENAI_API_KEY=your_openai_api_key
-DATABASE_URL=sqlite://legatio.db
-```
+### **Setup**
+1. Clone this repository:
+   ```
+   git clone <repository-url>
+   cd <repository-name>
+   ```
 
-### 3. Build and Run
-Build the project with Cargo:
-```bash
-cargo build --release
-```
-Run the application:
-```bash
-cargo run
-```
+2. Install dependencies:
+   ```
+   cargo build --release
+   ```
 
----
+3. Set your OpenAI API Key:
+   ```
+   export OPENAI_API_KEY=your_openai_api_key
+   ```
 
-## Usage Guide
-
-### Starting the Application
-After running `cargo run`, the application will initialize by checking for existing projects. If you don’t have a project, you'll be prompted to create a new one.
+4. Run the application:
+   ```
+   cargo run --release
+   ```
 
 ---
 
-### **Navigation Workflow**
+## **How to Use**
 
-#### 1. **Main Menu**
-Choose between creating a new project or selecting an existing project.
+### **Legatio Workflow**
+1. **Projects as Workspaces**:
+   - A project in Legatio represents a "workspace" where you can manage prompts, integrate scrolls (files), and interact with the AI.
+   - Each project is tied to a directory in your file system.
 
-#### 2. **Project Operations**
-Once a project is selected, you can:
-- View saved prompts and select one to expand.
-- Interact with the model using existing prompts.
-- Add, edit, or remove scrolls associated with the project.
+2. **The `.md` File**:
+   - Every project has a key accompanying file named `legatio.md`, where all AI-generated interactions, prompts, and outputs are logged and stored.
+   - `legatio.md` serves as both a record and a workspace for interacting with the tool.
 
-#### 3. **Prompt Interaction**
-Within a project, you can:
-- Chain existing prompts into structured discussions.
-- Generate new outputs with OpenAI's API.
-- Save outputs back into the system for future reference.
+     **Example Structure of the File**:
+     ```markdown
+     # PROMPT 1
+     Write a summary for the article on climate change.
+     
+     # OUTPUT 1
+     Climate change refers to long-term shifts in temperatures and weather patterns, primarily caused by human activities...
+     
+     # ASK MODEL BELOW
+     Analyze the impact of fossil fuel usage on global average temperatures.
+     ```
+
+   - The content below the `# ASK MODEL BELOW` marker in the file is treated as "new input" for the AI.
+
+3. **Scrolls**:
+   - Scrolls are external files attached to a project that contain useful context or reference material required for completing tasks.
+   - These scrolls are read and processed by the AI while responding to prompts.
+   - Scrolls are managed through the `EditScrolls` mode in the UI.
+
+### **Navigating Legatio's Modes**
+
+Legatio follows a structured pipeline wherein a user moves between different **states**. Below is an explanation of the key states and how to interact with them:
+
+#### 1. **Project Management**
+
+- **[s] Select Project**: Select an existing project or directory to work on.
+- **[n] New Project**: Create a new project directly in the UI. You'll be asked to provide a directory.
+- **[d] Delete Project**: Permanently remove a project from the system.
+- **[q] Quit**: Exit the application.
+
+#### 2. **Prompt Management**
+
+- **[b] Select Prompt**: Choose an existing prompt within the project to continue working with the AI.
+- **[d] Delete Prompt**: Remove a specific prompt from the project.
+- **[e] Edit Scrolls**: Manage scrolls associated with the project.
+- **[p] Change Project**: Switch to a different project.
+- **[q] Quit**: Exit the application.
+
+#### 3. **Asking the AI**
+
+- **[a] Ask the Model**: Enter your query for the model to generate a response.
+- **[b] Switch Branch**: Navigate or move between branches.
+- **[e] Edit Scrolls**: Add, edit, or remove scrolls.
+- **[p] Change Project**: Alternate between projects.
+- **[q] Quit**: Exit.
 
 #### 4. **Scroll Management**
-Attach or remove "scrolls" (artifacts such as files or references) which enhance the context of AI interactions.
 
-#### 5. **Exit the Application**
-To exit, choose the "Exit" option from any of the menus.
-
----
-
-### Example Workflow
-
-1. **Create a New Project**:
-    - Choose `New Project` when prompted.
-    - Select a directory from your filesystem.
-    - A new project will be initialized, and you can start configuring it with prompts and scrolls.
-
-2. **Add Scrolls**:
-    - In the `Edit Scrolls` section, append new resources (e.g., text files) to your project for use in model prompts.
-
-3. **Interact with OpenAI's Model**:
-    - Use the `Ask the Model` feature to load scrolls, system prompts, and engage in meaningful LLM-based interactions.
-
-4. **Save Outputs**:
-    - Output from the model is appended to the project's `legatio.md` file and saved as a prompt chain.
+- **[n] New Scroll**: Attach new files to the project directory as scrolls.
+- **[d] Delete Scroll**: Remove an associated scroll from the project.
+- **[a] Ask Model**: Access the AI interaction with the project's context.
+- **[s] Switch Branch**: Return to the main branch of the project.
+- **[p] Change Project**: Exit to a different project.
+- **[q] Quit**: Exit the application.
 
 ---
 
-## File Structure
+### **Branching in Legatio**
+Branching is a powerful feature of Legatio that allows you to:
+1. Create isolated versions of a project where you try out different ideas without affecting the parent branch.
+2. Experiment with specific chains of prompts while maintaining the main project structure.
 
-Legatio organizes files systematically within your projects. Here is an example structure:
-```
-/my-project
-    ├── legatio.db        # SQLite database used for storing projects, prompts, and scroll metadata.
-    ├── project_1/
-    │   ├── legatio.md    # AI interaction history and saved prompts for this project.
-    │   ├── scroll_1.txt  # Attached scroll file.
-    ├── project_2/
-    │   ├── legatio.md
-    │   ├── scroll_2.txt
-```
+#### How It Works
+- Branching allows you to switch to a specific segment of your ongoing project.
+- You can view, modify, and chain your prompts differently for each branch.
 
----
+#### Real-World Example
+- **Branch A**: Generates a concise executive summary.
+- **Branch B**: Creates a long-form, in-depth analysis.
 
-## Development Notes
-
-### Database
-The project uses SQLite as the primary datastore. The `legatio.db` file will automatically generate at runtime.
-
-### Logging
-Legatio includes logging functionality for tracking issues during runtime. Logs are printed to the terminal when `env_logger::init()` is called.
+Switching branches dynamically pulls all relevant project context (prompts, scrolls, etc.) into the workspace.
 
 ---
 
-## Videos and Screenshots (Placeholder)
+### **AI Workflow**
+Here's how prompts work with Legatio and the AI:
+1. System Prompts:
+   - Scrolls are processed into a **system prompt**, offering background information to the AI.
 
-Below are placeholders where you can later include screenshots or videos demonstrating the user workflow.
+2. Input Prompts:
+   - User-defined inputs (or prompts) are used to query the model.
 
-### Screenshots
-- **Project Selection Screen**
-  ![Project Selection Screen](screenshots/project_selection.png)
+3. Prompt Chaining:
+   - Legatio supports chaining prompts together, allowing context from previous prompts to be fed into new queries.
 
-- **Prompt Interaction**
-  ![Prompt Interaction](screenshots/prompt_interaction.png)
-
-### Video Guide
-- **Video Placeholder**  
-[![Video Walkthrough](https://img.youtube.com/vi/sample_video_id/0.jpg)](https://www.youtube.com/watch?v=sample_video_id)
-
----
-
-## Contribution
-We welcome contributions! To contribute:
-1. Fork the repository.
-2. Create a new branch and make necessary changes.
-3. Submit a pull request.
-
-Make sure your code adheres to Rust best practices and passes existing tests.
+4. Output Storage:
+   - AI responses are stored alongside their associated prompts in the `legatio.md` file.
 
 ---
 
-## License
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for more details.
+### **Shortcuts Table**
+| Shortcut       | Action                          |
+|----------------|---------------------------------|
+| `s`            | Select Project                 |
+| `n`            | Create New Project/Scroll      |
+| `d`            | Delete Project/Prompt/Scroll   |
+| `e`            | Edit Scrolls                  |
+| `a`            | Ask AI Model                   |
+| `b`            | Switch Branch                  |
+| `p`            | Change Project                 |
+| `q`            | Quit the Application           |
 
 ---
 
-## Contact
-For questions or feedback, reach out:
-- **Email**: `your_email@example.com`
-- **GitHub Issues**: [Report an Issue](https://github.com/your_username/legatio/issues)
+## **Best Practices**
 
----
+1. **Divide and Conquer**:
+   Use branching to divide large tasks into manageable sub-segments.
 
-Enjoy using **Legatio** to supercharge your AI-assisted workflows! 🚀
+2. **Organize with Scrolls**:
+   Attach relevant documentation, context files, or external research to projects for more effective AI responses.
+
+3. **Utilize Chains**:
+   When working on a project with multiple prompts, use chaining to maintain coherency in output.
+
+4. **Maintain the `.md` File**:
+   The `legatio.md` is your source of truth for all interactions in a specific project; review it periodically for clarity and structure.
+

@@ -4,6 +4,7 @@ use openai_api_rs::v1::common::GPT4_O_LATEST; // Select model as per your use ca
 use std::env;
 use anyhow::{Result, Context};
 
+use crate::utils::logger::log_info;
 use crate::utils::structs::Prompt;
 
 pub async fn get_openai_response(
@@ -20,6 +21,7 @@ pub async fn get_openai_response(
 
     let mut msgs = vec![];
     if !system_prompt.is_empty() {
+        log_info("system_prompt NOT EMPTY");
         msgs.push(
             ChatCompletionMessage {
                 role: chat_completion::MessageRole::system,
@@ -32,6 +34,7 @@ pub async fn get_openai_response(
     }
 
     if messages.is_some() {
+        log_info(&format!("Messages: \n{:?}", messages));
         for msg in messages.unwrap().iter() {
             msgs.push(
                 ChatCompletionMessage {
@@ -55,10 +58,17 @@ pub async fn get_openai_response(
         }
     }
 
+    let usr_input = if user_input.is_empty() { 
+        String::from(".") 
+    } else { 
+        user_input.to_owned() 
+    };
+    log_info(&format!("User input: {}", usr_input));
+
     msgs.push(
         ChatCompletionMessage {
             role: chat_completion::MessageRole::user,
-            content: chat_completion::Content::Text(user_input.to_owned()),
+            content: chat_completion::Content::Text(usr_input),
             name: None,
             tool_calls: None,
             tool_call_id: None,
