@@ -184,7 +184,7 @@ impl Legatio {
                     // Prompt PREP
                     let prompt = self.current_prompt.as_ref();
                     let file_prompt = fs::read_to_string(
-                        &PathBuf::from(
+                        PathBuf::from(
                             &self.current_project.as_ref().unwrap().project_path
                         ).join("legatio.md")                                   
                     );
@@ -193,7 +193,7 @@ impl Legatio {
                     let pmp_chain: Option<Vec<Prompt>>;
                     if file_prompt.is_err() {
                         File::create(
-                            &PathBuf::from(
+                            PathBuf::from(
                                 &self.current_project.as_ref().unwrap().project_path
                             ).join("legatio.md")
                         ).expect("Could not create file!");
@@ -405,11 +405,11 @@ impl Legatio {
                         let project_name = project
                             .project_path
                             .split('/')
-                            .last()
+                            .next_back()
                             .unwrap_or("[Unnamed Project]");
                         let mut concat_prompts = vec![format!(" -[ {} -:- Unchained]-", project_name)];
                         for p in prompts.iter() {
-                            let (p_str, o_str) = format_prompt(&p);
+                            let (p_str, o_str) = format_prompt(p);
                             concat_prompts.push(format!("{}\n{}", p_str, o_str));
                         }
                         concat_prompts.reverse();
@@ -424,10 +424,7 @@ impl Legatio {
 
                             if idx < prompts.len() {
                                 idx = prompts.len() - 1 - idx;
-                                self.current_prompt = match prompts.get(idx) {
-                                    Some(p) => Some(p.to_owned()),
-                                    _ => None,
-                                };
+                                self.current_prompt = prompts.get(idx).map(|p| p.to_owned());
                                 chain_into_canvas(
                                     project,
                                     Some(&prompts),
@@ -451,14 +448,14 @@ impl Legatio {
                     let project_name = project
                         .project_path
                         .split('/')
-                        .last()
+                        .next_back()
                         .unwrap_or("[Unnamed Project]");
 
                     let mut concat_prompts = vec![
                         format!(" -[ {} -:- Unchained]-", project_name)
                     ];
                     for p in prompts.iter() {
-                        let (p_str, o_str) = format_prompt(&p);
+                        let (p_str, o_str) = format_prompt(p);
                         concat_prompts.push(format!("{}\n{}", p_str, o_str));
                     }
 

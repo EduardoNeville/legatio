@@ -59,8 +59,8 @@ pub async fn update_prompt(
     );
 
     sqlx::query(&query)
-    .bind(&new_value)
-    .bind(&col_comp_val)
+    .bind(new_value)
+    .bind(col_comp_val)
     .execute(pool)
     .await
     .map_err(|err| {
@@ -87,7 +87,7 @@ pub async fn delete_prompt(
     pool: &SqlitePool,
     prompt: &Prompt
 ) -> Result<()> {
-    if let Err(error) = delete_module(pool, &"prompts", &"prompt_id", &prompt.prompt_id)
+    if let Err(error) = delete_module(pool, "prompts", "prompt_id", &prompt.prompt_id)
         .await
     {
         log_error(&format!("FAILED :: DELETE prompt_id: [{}]", 
@@ -98,16 +98,16 @@ pub async fn delete_prompt(
 
     if let Err(error) = update_prompt(
         pool,
-        &"prev_prompt_id",
+        "prev_prompt_id",
         &prompt.prev_prompt_id,
-        &"prev_prompt_id",
+        "prev_prompt_id",
         &prompt.prompt_id)
         .await
     {
         log_error(&format!("FAILED :: DELETE -> UPDATE prompt_id: [{}]", 
             prompt.prompt_id,
         ));
-        return Err(error.into());
+        return Err(error);
     }
 
     Ok(())
@@ -122,12 +122,12 @@ pub async fn system_prompt(scrolls: &[Scroll])-> String {
         system_prompt.push_str(&format!("```{}\n{}```\n", scroll_name, scroll.content));
     }
    
-    return system_prompt
+    system_prompt
 }
 
 pub fn prompt_chain(prompts: &[Prompt], prompt: &Prompt) -> Vec<Prompt> {
     let mut prompt_map: HashMap<&str, &Prompt> = prompts
-        .into_iter()
+        .iter()
         .map(|prompt| (prompt.prompt_id.as_ref(), prompt))
         .collect();
 
@@ -147,7 +147,7 @@ pub fn prompt_chain(prompts: &[Prompt], prompt: &Prompt) -> Vec<Prompt> {
         }
     }
 
-    return chain;
+    chain
 }
 
 pub fn format_prompt(p: &Prompt)-> (String, String) {

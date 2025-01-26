@@ -40,7 +40,7 @@ pub async fn get_scrolls(pool: &SqlitePool, project_id: &str)-> Result<Vec<Scrol
 }
 
 pub async fn delete_scroll(pool: &SqlitePool, scroll_id: &str) -> Result<()> {
-    delete_module(pool, &"scrolls", &"scroll_id", scroll_id)
+    delete_module(pool, "scrolls", "scroll_id", scroll_id)
         .await
         .expect("Error in scroll deletion");
     Ok(())

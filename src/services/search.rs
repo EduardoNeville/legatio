@@ -1,6 +1,5 @@
 use std::{borrow::Cow, path::PathBuf, thread::spawn};
 
-use std::io::Result;
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode};
 use ignore::{DirEntry, WalkBuilder, WalkState};
 use nucleo_picker::{

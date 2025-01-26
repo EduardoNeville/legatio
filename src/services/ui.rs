@@ -37,7 +37,7 @@ fn helper_print(
     
     let child_prompts: Vec<&Prompt> = prompts
         .iter()
-        .filter(|p| &p.prev_prompt_id == &prompt.prompt_id)
+        .filter(|p| p.prev_prompt_id == prompt.prompt_id)
         .collect();
 
     for p in child_prompts.iter() {
@@ -52,7 +52,7 @@ fn helper_print(
 
 pub async fn usr_prompts(prompts: &Vec<Prompt>) -> Result<Vec<String>> {
     let fst_prompts: Vec<&Prompt> = prompts.iter().filter(
-        |p| &p.prev_prompt_id == &p.project_id
+        |p| p.prev_prompt_id == p.project_id
     ).collect();
 
     let mut format_vec: Vec<String> = vec![];

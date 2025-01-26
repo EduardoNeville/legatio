@@ -60,7 +60,7 @@ pub fn format_project_title(current_project: &Option<Project>) -> String {
     match current_project {
         Some(project) => format!(
             "[ Current Project: {} ]",
-            project.project_path.split('/').last().unwrap_or("")
+            project.project_path.split('/').next_back().unwrap_or("")
         ),
         None => "[ Projects ]".to_string(),
     }
@@ -80,7 +80,7 @@ pub fn build_select_project(projects: &[Project])-> (Vec<Line<'static>>, Vec<Str
         str_items.push(proj_name.to_owned());
         proj_items.push(Line::from(proj_name));
     }
-    return (proj_items, str_items)
+    (proj_items, str_items)
 }
 
 #[cfg(test)]
