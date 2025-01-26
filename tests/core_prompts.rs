@@ -1,7 +1,9 @@
 #[cfg(test)]
 mod tests {
     use legatio::{
-        core::prompt::{delete_prompt, get_prompts, store_prompt, update_prompt}, prompt_chain, system_prompt, utils::structs::{Prompt, Scroll}
+        core::prompt::{delete_prompt, get_prompts, store_prompt, update_prompt},
+        prompt_chain, system_prompt,
+        utils::structs::{Prompt, Scroll},
     };
     use sqlx::sqlite::SqlitePoolOptions;
     use sqlx::SqlitePool;
@@ -316,17 +318,31 @@ mod tests {
         assert_eq!(fetched_prompt.output, prompt.output);
 
         // Step 3: Update the Prompt
-        let update_result = update_prompt(&pool, "content", "Updated prompt content", "prompt_id", "prompt_1").await;
+        let update_result = update_prompt(
+            &pool,
+            "content",
+            "Updated prompt content",
+            "prompt_id",
+            "prompt_1",
+        )
+        .await;
         assert!(update_result.is_ok(), "Failed to update prompt");
 
         let updated_prompts = get_prompts(&pool, "project_1").await.unwrap();
-        assert_eq!(updated_prompts[0].content, "Updated prompt content", "Prompt content was not updated correctly");
+        assert_eq!(
+            updated_prompts[0].content, "Updated prompt content",
+            "Prompt content was not updated correctly"
+        );
 
         // Step 4: Delete the Prompt
         let delete_result = delete_prompt(&pool, &prompt).await;
         assert!(delete_result.is_ok(), "Failed to delete prompt");
 
         let remaining_prompts = get_prompts(&pool, "project_1").await.unwrap();
-        assert_eq!(remaining_prompts.len(), 0, "Expected no remaining prompts after deletion");
+        assert_eq!(
+            remaining_prompts.len(),
+            0,
+            "Expected no remaining prompts after deletion"
+        );
     }
 }

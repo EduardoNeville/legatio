@@ -75,4 +75,3 @@ pub fn usr_prompt_chain(prompts: &[Prompt]) -> Vec<String> {
     str_items.reverse();
     str_items
 }
-

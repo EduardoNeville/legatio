@@ -1,9 +1,4 @@
-use crate::utils::{
-    db_utils::delete_module,
-    error::AppError,
-    logger::log_error,
-    structs::Scroll,
-};
+use crate::utils::{db_utils::delete_module, error::AppError, logger::log_error, structs::Scroll};
 use anyhow::Result;
 use sqlx::sqlite::SqlitePool;
 use std::fs;
@@ -15,7 +10,7 @@ pub async fn store_scroll(pool: &SqlitePool, scroll: &Scroll) -> Result<()> {
          SELECT $1, $2, $3, $4
          WHERE NOT EXISTS (
              SELECT 1 FROM scrolls WHERE scroll_path = $2 AND content = $3
-         )"
+         )",
     )
     .bind(&scroll.scroll_id)
     .bind(&scroll.scroll_path)
@@ -110,8 +105,7 @@ pub async fn update_scroll_content(pool: &SqlitePool, scroll: &Scroll) -> Result
             // If the error is not because of a missing file, propagate it
             Err(AppError::FileError(format!(
                 "Failed to read file '{}': {}",
-                scroll.scroll_path,
-                err
+                scroll.scroll_path, err
             ))
             .into())
         }
@@ -138,11 +132,7 @@ pub fn read_file(file_path: &str, project_id: &str, scroll: Option<&Scroll>) -> 
         Err(error) => {
             // Handle file not found error
             if error.kind() == std::io::ErrorKind::NotFound {
-                Err(AppError::FileError(format!(
-                    "File not found at path: '{}'",
-                    file_path
-                ))
-                .into())
+                Err(AppError::FileError(format!("File not found at path: '{}'", file_path)).into())
             } else {
                 // Handle other file-related errors
                 Err(AppError::FileError(format!(

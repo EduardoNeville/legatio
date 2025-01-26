@@ -1,9 +1,4 @@
-use crate::utils::{
-    db_utils::delete_module,
-    logger::log_error,
-    structs::Project,
-    error::AppError,
-};
+use crate::utils::{db_utils::delete_module, error::AppError, logger::log_error, structs::Project};
 use anyhow::Result;
 use ratatui::text::Line;
 use sqlx::sqlite::SqlitePool;
@@ -15,7 +10,7 @@ pub async fn store_project(pool: &SqlitePool, project: &Project) -> Result<()> {
          SELECT $1, $2
          WHERE NOT EXISTS (
              SELECT 1 FROM projects WHERE project_path = $2
-         )"
+         )",
     )
     .bind(&project.project_id)
     .bind(&project.project_path)
@@ -90,4 +85,3 @@ pub fn build_select_project(projects: &[Project]) -> (Vec<Line<'static>>, Vec<St
     }
     (proj_items, str_items)
 }
-

@@ -1,18 +1,15 @@
 #[cfg(test)]
 mod tests {
-    use sqlx::sqlite::SqlitePoolOptions;
-    use sqlx::SqlitePool;
     use legatio::{
         core::scroll::{
-            delete_scroll,
-            get_scrolls,
-            read_file,
-            store_scroll,
-            update_scroll_content
+            delete_scroll, get_scrolls, read_file, store_scroll, update_scroll_content,
         },
         utils::logger::initialize_logger,
-        utils::structs::Scroll, AppError
+        utils::structs::Scroll,
+        AppError,
     };
+    use sqlx::sqlite::SqlitePoolOptions;
+    use sqlx::SqlitePool;
     use std::fs;
 
     // Utility function to create an in-memory SQLite pool for testing
@@ -223,7 +220,7 @@ mod tests {
         assert_eq!(scroll.scroll_path, file_path);
         assert_eq!(scroll.content, content);
         assert_eq!(scroll.project_id, "project_1");
-        
+
         // Clean up the temporary file
         fs::remove_file(file_path).unwrap();
 
@@ -232,7 +229,9 @@ mod tests {
         let error_result = read_file(invalid_file_path, "project_1", None);
 
         assert!(error_result.is_err());
-        if let Some(AppError::FileError(err_msg)) = error_result.err().unwrap().downcast_ref::<AppError>() {
+        if let Some(AppError::FileError(err_msg)) =
+            error_result.err().unwrap().downcast_ref::<AppError>()
+        {
             assert!(err_msg.contains("File not found at path"));
         }
     }

@@ -1,9 +1,9 @@
 #[cfg(test)]
 mod tests {
     use legatio::{
-        services::ui::*,
         core::prompt::{get_prompts, store_prompt},
-        utils::structs::{Project, Prompt}
+        services::ui::*,
+        utils::structs::{Project, Prompt},
     };
     use sqlx::{sqlite::SqlitePoolOptions, SqlitePool};
 

@@ -1,6 +1,5 @@
-use crossterm::event::KeyEvent;
 use crossterm::{
-    event::{self, Event},
+    event::{self, Event, KeyEvent},
     terminal::{disable_raw_mode, enable_raw_mode},
 };
 use ratatui::layout::{Constraint, Direction, Layout};
@@ -16,6 +15,7 @@ use std::{io, vec};
 
 use crate::{
     core::{
+        canvas::{chain_into_canvas, chain_match_canvas},
         project::{
             build_select_project, delete_project, format_project_title, get_projects, store_project,
         },
@@ -23,7 +23,6 @@ use crate::{
             delete_prompt, format_prompt, get_prompts, prompt_chain, store_prompt, system_prompt,
         },
         scroll::{delete_scroll, get_scrolls, read_file, store_scroll, update_scroll_content},
-        canvas::{chain_into_canvas, chain_match_canvas}
     },
     services::{
         display::{AppState, InputEvent},
@@ -43,6 +42,12 @@ pub struct Legatio {
     state: AppState,
     current_project: Option<Project>,
     current_prompt: Option<Prompt>,
+}
+
+impl Default for Legatio {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Legatio {

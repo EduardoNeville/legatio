@@ -1,10 +1,10 @@
 #[cfg(test)]
 mod tests {
+    use anyhow::Result;
     use legatio::{
         core::canvas::*,
-        utils::structs::{Project, Prompt}
+        utils::structs::{Project, Prompt},
     };
-    use anyhow::Result;
     use std::fs::{self, File};
     use std::io::Write;
     use tempfile::tempdir; // Import tempfile for temporary directories

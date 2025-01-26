@@ -108,4 +108,3 @@ pub fn chain_match_canvas(project: &Project) -> Result<String> {
     log_error("The canvas file does not include the '# ASK MODEL BELLOW' marker.");
     Ok(String::new())
 }
-

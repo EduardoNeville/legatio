@@ -10,13 +10,12 @@ use std::collections::HashMap;
 
 /// Stores a prompt into the database.
 pub async fn store_prompt(pool: &SqlitePool, prompt: &Prompt) -> Result<()> {
-
     sqlx::query(
         "INSERT INTO prompts (prompt_id, project_id, prev_prompt_id, content, output) 
          SELECT $1, $2, $3, $4, $5
          WHERE NOT EXISTS (
              SELECT 1 FROM prompts WHERE content = $4 AND output = $5
-         )"
+         )",
     )
     .bind(&prompt.prompt_id) // Values to insert
     .bind(&prompt.project_id)
@@ -192,4 +191,3 @@ pub fn format_prompt_depth(p: &Prompt, b_depth: &str) -> (String, String) {
 
     (p_str, o_str)
 }
-
