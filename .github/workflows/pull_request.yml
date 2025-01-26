@@ -1,4 +1,4 @@
-name: Rust Testing
+name: Pull Request Testing
 
 on:
   pull_request:
@@ -14,6 +14,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    - name: Format
+      run: cargo clippy --fix --allow-dirty --allow-staged
     - name: Build
       run: cargo build --verbose
     - name: Run tests
