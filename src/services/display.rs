@@ -76,4 +76,3 @@ impl From<KeyEvent> for InputEvent {
         }
     }
 }
-

@@ -1,7 +1,11 @@
 [package]
 name = "legatio"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
+
+[lib]
+name = "legatio"
+path = "src/lib.rs"
 
 [profile.dev]
 debug = 1
