@@ -2,6 +2,7 @@ use crate::utils::{
     db_utils::delete_module,
     logger::log_error,
     structs::Project,
+    error::AppError,
 };
 use anyhow::Result;
 use ratatui::text::Line;
@@ -9,19 +10,27 @@ use sqlx::sqlite::SqlitePool;
 
 /// Inserts a project into the database.
 pub async fn store_project(pool: &SqlitePool, project: &Project) -> Result<()> {
-    if let Err(error) =
-        sqlx::query("INSERT INTO projects (project_id, project_path) VALUES ($1, $2)")
-            .bind(&project.project_id)
-            .bind(&project.project_path)
-            .execute(pool)
-            .await
-    {
+    sqlx::query(
+        "INSERT INTO projects (project_id, project_path) 
+         SELECT $1, $2
+         WHERE NOT EXISTS (
+             SELECT 1 FROM projects WHERE project_path = $2
+         )"
+    )
+    .bind(&project.project_id)
+    .bind(&project.project_path)
+    .execute(pool)
+    .await
+    .map_err(|err| {
         log_error(&format!(
             "FAILED :: INSERT project_id: [{}]",
             project.project_id,
         ));
-        return Err(error.into());
-    }
+        AppError::DatabaseError(format!(
+            "Failed to store project with ID {}. Reason: {}",
+            project.project_id, err
+        ))
+    })?;
 
     Ok(())
 }

@@ -17,7 +17,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_store_project() {
+    async fn test_store_project_success() {
         let pool = create_test_pool().await;
 
         sqlx::query(
@@ -36,15 +36,48 @@ mod tests {
         };
 
         let result = store_project(&pool, &project).await;
+
         assert!(result.is_ok());
 
-        // Verify project was stored
+        // Verify that the project was stored
         let stored_projects = get_projects(&pool).await.unwrap();
         assert_eq!(stored_projects.len(), 1);
 
         let stored_project = &stored_projects[0];
         assert_eq!(stored_project.project_id, "project_1");
         assert_eq!(stored_project.project_path, "/path/to/project_1");
+    }
+
+    #[tokio::test]
+    async fn test_store_project_duplicate() {
+        let pool = create_test_pool().await;
+
+        sqlx::query(
+            "CREATE TABLE projects (
+                project_id TEXT PRIMARY KEY,
+                project_path TEXT
+            );",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let project = Project {
+            project_id: "project_1".to_string(),
+            project_path: "/path/to/project_1".to_string(),
+        };
+
+        store_project(&pool, &project).await.unwrap();
+
+        // Attempt to store a duplicate project
+        let duplicate_result = store_project(&pool, &project).await;
+
+        // The second insertion should succeed silently (no duplicates stored)
+        assert!(duplicate_result.is_ok());
+
+        // Ensure that there is still only one project stored
+        let stored_projects = get_projects(&pool).await.unwrap();
+        assert_eq!(stored_projects.len(), 1);
     }
 
     #[tokio::test]

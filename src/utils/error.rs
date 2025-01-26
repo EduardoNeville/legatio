@@ -6,7 +6,6 @@ use std::fmt;
 pub enum AppError {
     DatabaseError(String),
     FileError(String),
-    ValidationError(String),
     UnexpectedError(String),
 }
 
@@ -16,7 +15,6 @@ impl fmt::Display for AppError {
         match self {
             AppError::DatabaseError(msg) => write!(f, "Database operation failed: {}", msg),
             AppError::FileError(msg) => write!(f, "File operation failed: {}", msg),
-            AppError::ValidationError(msg) => write!(f, "Validation error: {}", msg),
             AppError::UnexpectedError(msg) => write!(f, "Unexpected or unknown error: {}", msg),
         }
     }

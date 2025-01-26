@@ -15,7 +15,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_store_prompt() {
+    async fn test_store_prompt_success() {
         let pool = create_test_pool().await;
 
         sqlx::query(
@@ -32,29 +32,63 @@ mod tests {
         .unwrap();
 
         let prompt = Prompt {
-            prompt_id: "test_prompt".to_string(),
-            project_id: "test_project".to_string(),
-            prev_prompt_id: "prev_test_prompt".to_string(),
-            content: "Test Prompt Content".to_string(),
-            output: "Test Prompt Output".to_string(),
+            prompt_id: "prompt_1".to_string(),
+            project_id: "project_1".to_string(),
+            prev_prompt_id: "".to_string(),
+            content: "content".to_string(),
+            output: "output".to_string(),
         };
 
         let result = store_prompt(&pool, &prompt).await;
+
         assert!(result.is_ok());
 
-        // Verify that the prompt was stored in the database
-        let stored_prompt: (String, String, String, String, String) = sqlx::query_as(
-            "SELECT prompt_id, project_id, prev_prompt_id, content, output FROM prompts",
+        // Verify that the prompt was stored
+        let stored_prompts = get_prompts(&pool, "project_1").await.unwrap();
+        assert_eq!(stored_prompts.len(), 1);
+
+        let stored_prompt = &stored_prompts[0];
+        assert_eq!(stored_prompt.prompt_id, "prompt_1");
+        assert_eq!(stored_prompt.content, "content");
+        assert_eq!(stored_prompt.output, "output");
+    }
+
+    #[tokio::test]
+    async fn test_store_prompt_duplicate() {
+        let pool = create_test_pool().await;
+
+        sqlx::query(
+            "CREATE TABLE prompts (
+                prompt_id TEXT PRIMARY KEY,
+                project_id TEXT,
+                prev_prompt_id TEXT,
+                content TEXT,
+                output TEXT
+            );",
         )
-        .fetch_one(&pool)
+        .execute(&pool)
         .await
         .unwrap();
 
-        assert_eq!(stored_prompt.0, "test_prompt");
-        assert_eq!(stored_prompt.1, "test_project");
-        assert_eq!(stored_prompt.2, "prev_test_prompt");
-        assert_eq!(stored_prompt.3, "Test Prompt Content");
-        assert_eq!(stored_prompt.4, "Test Prompt Output");
+        let prompt = Prompt {
+            prompt_id: "prompt_1".to_string(),
+            project_id: "project_1".to_string(),
+            prev_prompt_id: "".to_string(),
+            content: "content".to_string(),
+            output: "output".to_string(),
+        };
+
+        store_prompt(&pool, &prompt).await.unwrap();
+
+        // Attempt to store a duplicate prompt
+        let duplicate_result = store_prompt(&pool, &prompt).await;
+
+        // The second insertion should succeed silently
+        assert!(duplicate_result.is_ok());
+
+        // Ensure that there is still only one prompt stored
+        let stored_prompts = get_prompts(&pool, "project_1").await.unwrap();
+        assert_eq!(stored_prompts.len(), 1);
     }
 
     #[tokio::test]

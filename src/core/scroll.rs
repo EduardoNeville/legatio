@@ -1,15 +1,21 @@
-use crate::utils::db_utils::delete_module;
-use crate::utils::error::AppError;
-use crate::utils::logger::log_error;
-use crate::utils::structs::Scroll;
+use crate::utils::{
+    db_utils::delete_module,
+    error::AppError,
+    logger::log_error,
+    structs::Scroll,
+};
 use anyhow::Result;
 use sqlx::sqlite::SqlitePool;
 use std::fs;
 
 /// Inserts a scroll into the database.
 pub async fn store_scroll(pool: &SqlitePool, scroll: &Scroll) -> Result<()> {
-    if let Err(error) = sqlx::query(
-        "INSERT INTO scrolls (scroll_id, scroll_path, content, project_id) VALUES ($1, $2, $3, $4)",
+    sqlx::query(
+        "INSERT INTO scrolls (scroll_id, scroll_path, content, project_id) 
+         SELECT $1, $2, $3, $4
+         WHERE NOT EXISTS (
+             SELECT 1 FROM scrolls WHERE scroll_path = $2 AND content = $3
+         )"
     )
     .bind(&scroll.scroll_id)
     .bind(&scroll.scroll_path)
@@ -17,13 +23,16 @@ pub async fn store_scroll(pool: &SqlitePool, scroll: &Scroll) -> Result<()> {
     .bind(&scroll.project_id)
     .execute(pool)
     .await
-    {
+    .map_err(|err| {
         log_error(&format!(
             "FAILED :: INSERT scroll_id: [{}]",
             scroll.scroll_id,
         ));
-        return Err(error.into());
-    }
+        AppError::DatabaseError(format!(
+            "Failed to store scroll with ID {}. Reason: {}",
+            scroll.scroll_id, err
+        ))
+    })?;
 
     Ok(())
 }
