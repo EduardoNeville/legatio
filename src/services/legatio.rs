@@ -14,8 +14,6 @@ use std::path::PathBuf;
 use std::time::Duration;
 use std::{io, vec};
 
-use crate::core::canvas::{chain_into_canvas, chain_match_canvas};
-use crate::core::scroll::update_scroll_content;
 use crate::{
     core::{
         project::{
@@ -24,7 +22,8 @@ use crate::{
         prompt::{
             delete_prompt, format_prompt, get_prompts, prompt_chain, store_prompt, system_prompt,
         },
-        scroll::{delete_scroll, get_scrolls, read_file, store_scroll},
+        scroll::{delete_scroll, get_scrolls, read_file, store_scroll, update_scroll_content},
+        canvas::{chain_into_canvas, chain_match_canvas}
     },
     services::{
         display::{AppState, InputEvent},
@@ -528,7 +527,7 @@ impl Legatio {
             InputEvent::AskModel => {
                 if let Some(project) = &self.current_project {
                     let scrolls = get_scrolls(pool, &project.project_id).await.unwrap();
-                    let mut new_scrolls = vec![];
+                    let mut new_scrolls = Vec::new();
                     for scroll in scrolls.iter() {
                         let new_scroll = update_scroll_content(pool, scroll).await.unwrap();
                         new_scrolls.push(new_scroll);
