@@ -1,23 +1,25 @@
-use sqlx::sqlite::SqlitePool;
-use anyhow::Result;
 use crate::utils::db_utils::delete_module;
 use crate::utils::error::AppError;
-use crate::utils::structs::Scroll;
 use crate::utils::logger::log_error;
+use crate::utils::structs::Scroll;
+use anyhow::Result;
+use sqlx::sqlite::SqlitePool;
 use std::fs;
 
 /// Inserts a scroll into the database.
 pub async fn store_scroll(pool: &SqlitePool, scroll: &Scroll) -> Result<()> {
     if let Err(error) = sqlx::query(
-        "INSERT INTO scrolls (scroll_id, scroll_path, content, project_id) VALUES ($1, $2, $3, $4)")
-        .bind(&scroll.scroll_id)
-        .bind(&scroll.scroll_path)
-        .bind(&scroll.content)
-        .bind(&scroll.project_id)
-        .execute(pool)
-        .await
+        "INSERT INTO scrolls (scroll_id, scroll_path, content, project_id) VALUES ($1, $2, $3, $4)",
+    )
+    .bind(&scroll.scroll_id)
+    .bind(&scroll.scroll_path)
+    .bind(&scroll.content)
+    .bind(&scroll.project_id)
+    .execute(pool)
+    .await
     {
-        log_error(&format!("FAILED :: INSERT scroll_id: [{}]", 
+        log_error(&format!(
+            "FAILED :: INSERT scroll_id: [{}]",
             scroll.scroll_id,
         ));
         return Err(error.into());
@@ -26,15 +28,16 @@ pub async fn store_scroll(pool: &SqlitePool, scroll: &Scroll) -> Result<()> {
     Ok(())
 }
 
-pub async fn get_scrolls(pool: &SqlitePool, project_id: &str)-> Result<Vec<Scroll>> {
+pub async fn get_scrolls(pool: &SqlitePool, project_id: &str) -> Result<Vec<Scroll>> {
     let scrolls_result: Vec<Scroll> = sqlx::query_as::<_, Scroll>(
         "SELECT *
         FROM scrolls 
-        WHERE project_id = $1;")
-        .bind(project_id)
-        .fetch_all(pool)
-        .await
-        .unwrap();
+        WHERE project_id = $1;",
+    )
+    .bind(project_id)
+    .fetch_all(pool)
+    .await
+    .unwrap();
 
     Ok(scrolls_result)
 }
@@ -47,8 +50,8 @@ pub async fn delete_scroll(pool: &SqlitePool, scroll_id: &str) -> Result<()> {
 }
 
 pub async fn update_scroll_content(pool: &SqlitePool, scroll: &Scroll) -> Result<Scroll> {
-    let new_scroll = read_file(&scroll.scroll_path, &scroll.project_id, Some(scroll))
-        .map_err(|err| {
+    let new_scroll =
+        read_file(&scroll.scroll_path, &scroll.project_id, Some(scroll)).map_err(|err| {
             AppError::FileError(format!(
                 "Failed to read file '{}': {}",
                 scroll.scroll_path, err
@@ -69,7 +72,10 @@ pub async fn update_scroll_content(pool: &SqlitePool, scroll: &Scroll) -> Result
             "FAILED :: UPDATE scroll_id: {}, error: {}",
             new_scroll.scroll_id, err
         ));
-        AppError::DatabaseError(format!("Failed to update scroll: {}. Reason: {}", scroll.scroll_id, err))
+        AppError::DatabaseError(format!(
+            "Failed to update scroll: {}. Reason: {}",
+            scroll.scroll_id, err
+        ))
     })?;
 
     Ok(new_scroll)
@@ -97,9 +103,9 @@ pub fn read_file(file_path: &str, project_id: &str, scroll: Option<&Scroll>) -> 
 #[cfg(test)]
 mod tests {
     use super::*; // Import the functions from the current module
+    use crate::utils::structs::Scroll;
     use sqlx::sqlite::SqlitePoolOptions;
     use std::fs;
-    use crate::utils::structs::Scroll;
 
     // Utility function to create an in-memory SQLite pool for testing
     async fn create_test_pool() -> SqlitePool {

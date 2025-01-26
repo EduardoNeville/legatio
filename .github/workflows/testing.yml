@@ -3,6 +3,8 @@ name: Pull Request Testing
 on:
   pull_request:
     branches: [ "master", "develop" ]
+  push:
+    branches: [ "master", "develop" ]
 
 env:
   CARGO_TERM_COLOR: always
@@ -14,7 +16,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - name: Format
+    - name: Formatting
+      run: cargo fmt
+    - name: Linting
       run: cargo clippy --fix --allow-dirty --allow-staged
     - name: Build
       run: cargo build --verbose

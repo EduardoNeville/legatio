@@ -1,6 +1,6 @@
-use sqlx::{migrate::MigrateDatabase, sqlite::SqlitePool, Sqlite};
+use crate::utils::logger::{log_error, log_info};
 use anyhow::Result;
-use crate::utils::logger::{log_info, log_error};
+use sqlx::{migrate::MigrateDatabase, sqlite::SqlitePool, Sqlite};
 
 use super::error::AppError;
 
@@ -15,7 +15,7 @@ pub async fn get_db_pool(db_url: &str) -> Result<SqlitePool, AppError> {
                 return Err(AppError::DatabaseError(error_msg));
             }
         }
-        
+
         // Connect to the database
         let pool = match SqlitePool::connect(db_url).await {
             Ok(pool) => pool,
@@ -77,7 +77,7 @@ pub async fn get_db_pool(db_url: &str) -> Result<SqlitePool, AppError> {
             log_info("Prompts table created (if not already present).");
         }
     }
-    
+
     let pool = match SqlitePool::connect(db_url).await {
         Ok(pool) => pool,
         Err(error) => {
@@ -100,11 +100,7 @@ pub async fn delete_module(
     let query = format!("DELETE FROM {} WHERE {} = ?", table, column_name);
 
     // Execute the query with the given value as a parameter
-    match sqlx::query(&query)
-        .bind(column_value)
-        .execute(pool)
-        .await
-    {
+    match sqlx::query(&query).bind(column_value).execute(pool).await {
         Ok(_) => {
             log_info(&format!(
                 "Successfully deleted row from {} where {} = [{}]",
@@ -134,7 +130,6 @@ mod tests {
     // Helper function to set up the database
     async fn setup_test_db() -> SqlitePool {
         // Call the function to create the database and tables
-        
 
         get_db_pool(TEST_DATABASE_URL)
             .await
@@ -146,21 +141,34 @@ mod tests {
         let pool = setup_test_db().await;
 
         // Here, we'll check if the tables actually exist in the in-memory database
-        let result_projects: Result<(String,), _> = sqlx::query_as("SELECT name FROM sqlite_master WHERE type='TABLE' AND name='projects'")
-            .fetch_one(&pool)
-            .await;
+        let result_projects: Result<(String,), _> =
+            sqlx::query_as("SELECT name FROM sqlite_master WHERE type='TABLE' AND name='projects'")
+                .fetch_one(&pool)
+                .await;
 
-        let result_scrolls: Result<(String,), _> = sqlx::query_as("SELECT name FROM sqlite_master WHERE type='table' AND name='scrolls'")
-            .fetch_one(&pool)
-            .await;
+        let result_scrolls: Result<(String,), _> =
+            sqlx::query_as("SELECT name FROM sqlite_master WHERE type='table' AND name='scrolls'")
+                .fetch_one(&pool)
+                .await;
 
-        let result_prompts: Result<(String,), _> = sqlx::query_as("SELECT name FROM sqlite_master WHERE type='table' AND name='prompts'")
-            .fetch_one(&pool)
-            .await;
+        let result_prompts: Result<(String,), _> =
+            sqlx::query_as("SELECT name FROM sqlite_master WHERE type='table' AND name='prompts'")
+                .fetch_one(&pool)
+                .await;
 
-        assert!(result_projects.is_ok(), "Projects table was not created as expected: \n{:?}", result_projects);
-        assert!(result_scrolls.is_ok(), "Scrolls table was not created as expected");
-        assert!(result_prompts.is_ok(), "Prompts table was not created as expected");
+        assert!(
+            result_projects.is_ok(),
+            "Projects table was not created as expected: \n{:?}",
+            result_projects
+        );
+        assert!(
+            result_scrolls.is_ok(),
+            "Scrolls table was not created as expected"
+        );
+        assert!(
+            result_prompts.is_ok(),
+            "Prompts table was not created as expected"
+        );
     }
 
     //#[tokio::test]
@@ -226,7 +234,10 @@ mod tests {
 
         // Verify the specific error type
         if let Err(AppError::DatabaseError(message)) = result {
-            assert!(message.contains("no such table"), "Error message does not mention 'no such table'");
+            assert!(
+                message.contains("no such table"),
+                "Error message does not mention 'no such table'"
+            );
         } else {
             panic!("Expected AppError::DatabaseError, but received a different error.");
         }
@@ -236,14 +247,21 @@ mod tests {
     async fn test_get_db_pool_handles_reconnection() {
         // Test reconnection to an already-existing database
         {
-            let first_pool = get_db_pool(TEST_DATABASE_URL).await.expect("Failed to create first database connection");
+            let first_pool = get_db_pool(TEST_DATABASE_URL)
+                .await
+                .expect("Failed to create first database connection");
             assert!(!first_pool.is_closed(), "First pool is unexpectedly closed");
         }
 
         // Simulate reconnecting
         {
-            let second_pool = get_db_pool(TEST_DATABASE_URL).await.expect("Failed to reconnect to the database");
-            assert!(!second_pool.is_closed(), "Second pool is unexpectedly closed");
+            let second_pool = get_db_pool(TEST_DATABASE_URL)
+                .await
+                .expect("Failed to reconnect to the database");
+            assert!(
+                !second_pool.is_closed(),
+                "Second pool is unexpectedly closed"
+            );
         }
     }
 
@@ -262,7 +280,10 @@ mod tests {
 
         // Verify the specific error type
         if let Err(AppError::DatabaseError(message)) = result {
-            assert!(message.contains("Failed to connect"), "Error message does not mention 'Failed to connect'");
+            assert!(
+                message.contains("Failed to connect"),
+                "Error message does not mention 'Failed to connect'"
+            );
         } else {
             panic!("Expected AppError::DatabaseError, but received a different error.");
         }

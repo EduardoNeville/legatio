@@ -3,8 +3,8 @@ use sqlx::SqlitePool;
 
 use crate::{
     core::{
+        prompt::{format_prompt, format_prompt_depth},
         scroll::get_scrolls,
-        prompt::{format_prompt, format_prompt_depth}
     },
     utils::structs::{Project, Prompt},
 };
@@ -20,12 +20,7 @@ pub async fn usr_scrolls(pool: &SqlitePool, project: &Project) -> Result<Vec<Str
         .collect())
 }
 
-fn helper_print(
-    prompts: &Vec<Prompt>,
-    prompt: &Prompt,
-    b_depth: &str
-) -> Result<Vec<String>> {
-
+fn helper_print(prompts: &Vec<Prompt>, prompt: &Prompt, b_depth: &str) -> Result<Vec<String>> {
     let mut format_vec: Vec<String> = vec![];
     format_vec.push(b_depth.to_string());
 
@@ -33,17 +28,16 @@ fn helper_print(
     format_vec.push(p_str);
     format_vec.push(o_str);
 
-    let new_indent = format!("{}  |", b_depth);  // Append to the current indentation for children
-    
+    let new_indent = format!("{}  |", b_depth); // Append to the current indentation for children
+
     let child_prompts: Vec<&Prompt> = prompts
         .iter()
         .filter(|p| p.prev_prompt_id == prompt.prompt_id)
         .collect();
 
     for p in child_prompts.iter() {
-        let child_vec = helper_print(prompts, p, &new_indent).with_context(|| {
-            format!("Error processing child prompt with ID: {:?}", p.prompt_id)
-        })?;
+        let child_vec = helper_print(prompts, p, &new_indent)
+            .with_context(|| format!("Error processing child prompt with ID: {:?}", p.prompt_id))?;
         format_vec.extend(child_vec);
     }
 
@@ -51,14 +45,18 @@ fn helper_print(
 }
 
 pub async fn usr_prompts(prompts: &Vec<Prompt>) -> Result<Vec<String>> {
-    let fst_prompts: Vec<&Prompt> = prompts.iter().filter(
-        |p| p.prev_prompt_id == p.project_id
-    ).collect();
+    let fst_prompts: Vec<&Prompt> = prompts
+        .iter()
+        .filter(|p| p.prev_prompt_id == p.project_id)
+        .collect();
 
     let mut format_vec: Vec<String> = vec![];
     for fst_prompt in fst_prompts.iter() {
         let child_vec = helper_print(prompts, fst_prompt, "  |").with_context(|| {
-            format!("Error processing first prompt with ID: {:?}", fst_prompt.prompt_id)
+            format!(
+                "Error processing first prompt with ID: {:?}",
+                fst_prompt.prompt_id
+            )
         })?;
         format_vec.extend(child_vec);
     }
@@ -66,14 +64,14 @@ pub async fn usr_prompts(prompts: &Vec<Prompt>) -> Result<Vec<String>> {
     Ok(format_vec)
 }
 
-pub fn usr_prompt_chain(prompts: &[Prompt]) -> Vec<String>{
+pub fn usr_prompt_chain(prompts: &[Prompt]) -> Vec<String> {
     let mut str_items: Vec<String> = Vec::new();
     for p in prompts.iter() {
         let (p_str, o_str) = format_prompt(p);
         // Reverse order for fst at top
         str_items.push(o_str);
         str_items.push(p_str);
-    };
+    }
     str_items.reverse();
     str_items
 }
@@ -81,9 +79,9 @@ pub fn usr_prompt_chain(prompts: &[Prompt]) -> Vec<String>{
 #[cfg(test)]
 mod tests {
     use super::*;
-    use sqlx::{SqlitePool, sqlite::SqlitePoolOptions};
+    use crate::core::prompt::{get_prompts, store_prompt};
     use crate::utils::structs::{Project, Prompt};
-    use crate::core::prompt::{store_prompt, get_prompts};
+    use sqlx::{sqlite::SqlitePoolOptions, SqlitePool};
 
     /// Helper function to create a mock SQLite in-memory database and connection pool.
     async fn create_test_pool() -> SqlitePool {
@@ -131,8 +129,18 @@ mod tests {
     fn test_helper_print() {
         // Arrange: Create a chain of nested prompts
         let prompt1 = Prompt::new("project1", "Root Prompt", "Root Output", "root");
-        let prompt2 = Prompt::new("project1", "Child Prompt", "Child Output", &prompt1.prompt_id);
-        let prompt3 = Prompt::new("project1", "Grandchild Prompt", "Grandchild Output", &prompt2.prompt_id);
+        let prompt2 = Prompt::new(
+            "project1",
+            "Child Prompt",
+            "Child Output",
+            &prompt1.prompt_id,
+        );
+        let prompt3 = Prompt::new(
+            "project1",
+            "Grandchild Prompt",
+            "Grandchild Output",
+            &prompt2.prompt_id,
+        );
         let prompts = vec![prompt1.clone(), prompt2.clone(), prompt3.clone()];
 
         // Act: Format the prompts recursively
@@ -151,8 +159,18 @@ mod tests {
     async fn test_usr_prompts() {
         // Arrange: Create mock prompts for a project
         let prompt1 = Prompt::new("project1", "Root Prompt", "Root Output", "project1");
-        let prompt2 = Prompt::new("project1", "Child Prompt", "Child Output", &prompt1.prompt_id);
-        let prompt3 = Prompt::new("project1", "Grandchild Prompt", "Grandchild Output", &prompt2.prompt_id);
+        let prompt2 = Prompt::new(
+            "project1",
+            "Child Prompt",
+            "Child Output",
+            &prompt1.prompt_id,
+        );
+        let prompt3 = Prompt::new(
+            "project1",
+            "Grandchild Prompt",
+            "Grandchild Output",
+            &prompt2.prompt_id,
+        );
         let prompts = vec![prompt1.clone(), prompt2.clone(), prompt3.clone()];
 
         // Act: Format all prompts recursively
@@ -171,8 +189,18 @@ mod tests {
     fn test_usr_prompt_chain() {
         // Arrange: Create a chain of prompts
         let prompt1 = Prompt::new("project1", "First Prompt", "First Output", "root");
-        let prompt2 = Prompt::new("project1", "Second Prompt", "Second Output", &prompt1.prompt_id);
-        let prompt3 = Prompt::new("project1", "Third Prompt", "Third Output", &prompt2.prompt_id);
+        let prompt2 = Prompt::new(
+            "project1",
+            "Second Prompt",
+            "Second Output",
+            &prompt1.prompt_id,
+        );
+        let prompt3 = Prompt::new(
+            "project1",
+            "Third Prompt",
+            "Third Output",
+            &prompt2.prompt_id,
+        );
         let prompts = vec![prompt1.clone(), prompt2.clone(), prompt3.clone()];
 
         // Act: Fetch the reverse-ordered prompt chain
@@ -201,7 +229,7 @@ mod tests {
                 prev_prompt_id TEXT,
                 content TEXT,
                 output TEXT
-            );"
+            );",
         )
         .execute(&pool)
         .await

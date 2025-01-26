@@ -22,10 +22,10 @@ impl Project {
 /// the file's content, and the project ID it belongs to.
 #[derive(Debug, FromRow)]
 pub struct Scroll {
-    pub scroll_id: String,       // Unique identifier for the Scroll
-    pub scroll_path: String,     // The file path associated with the Scroll
-    pub content: String,         // The content of the Scroll (from the file)
-    pub project_id: String,      // The ID of the project the Scroll is associated with
+    pub scroll_id: String,   // Unique identifier for the Scroll
+    pub scroll_path: String, // The file path associated with the Scroll
+    pub content: String,     // The content of the Scroll (from the file)
+    pub project_id: String,  // The ID of the project the Scroll is associated with
 }
 
 impl Scroll {
@@ -59,4 +59,3 @@ impl Prompt {
         }
     }
 }
-
