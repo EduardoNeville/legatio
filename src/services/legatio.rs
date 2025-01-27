@@ -90,7 +90,7 @@ impl Legatio {
         pool: &SqlitePool,
     ) -> Result<()> {
         // Fetch projects for initialization
-        let projects = get_projects(pool).await.unwrap();
+        let projects = get_projects(pool).await?;
         if !projects.is_empty() {
             self.current_project = Some(projects[0].clone());
             self.state = AppState::SelectProject;
@@ -112,7 +112,7 @@ impl Legatio {
     ) -> Result<()> {
         // Prepare all the data we might need to render
         let theme = &self.user_config.as_ref().unwrap().theme;
-        let colors = extract_theme_colors(theme).unwrap();
+        let colors = extract_theme_colors(theme)?;
         let primary_color = colors.primary;
         let secondary_color = colors.secondary;
         let accent_color = colors.accent;
@@ -135,7 +135,7 @@ impl Legatio {
                 ];
                 bot_title = "[ Projects ]".to_string();
 
-                let projects: Vec<Project> = get_projects(pool).await.unwrap();
+                let projects: Vec<Project> = get_projects(pool).await?;
                 let (items, _) = build_select_project(&projects);
                 bot_items.extend(items);
             }
@@ -156,11 +156,11 @@ impl Legatio {
                         .unwrap_or("[Unnamed Project]");
                     bot_title = format!("[ {} -:- Prompts ]", project_name);
 
-                    let prompts = get_prompts(pool, &project.project_id).await.unwrap();
+                    let prompts = get_prompts(pool, &project.project_id).await?;
                     if prompts.is_empty() {
                         bot_items.push(Line::from("This project has no prompts!"));
                     } else {
-                        let prompt_strs = usr_prompts(prompts.as_ref()).await.unwrap();
+                        let prompt_strs = usr_prompts(prompts.as_ref()).await?;
                         for p in prompt_strs {
                             bot_items.push(Line::from(p));
                         }
@@ -181,7 +181,7 @@ impl Legatio {
                 bot_title = String::from("[ Prompts ]");
                 if let Some(project) = &self.current_project {
                     // Scroll PREP
-                    let scrolls = usr_scrolls(pool, project).await.unwrap();
+                    let scrolls = usr_scrolls(pool, project).await?;
                     // Initialize `scroll_items` if it hasn't been initialized
                     if scroll_items.is_none() {
                         scroll_items = Some(vec![]);
@@ -210,7 +210,7 @@ impl Legatio {
                         )
                         .expect("Could not create file!");
                     } else if prompt.is_some() {
-                        prompts = Some(get_prompts(pool, &project.project_id).await.unwrap());
+                        prompts = Some(get_prompts(pool, &project.project_id).await?);
 
                         if prompts.as_ref().unwrap().is_empty() {
                             bot_items.push(Line::from("This project has no prompts!"));
@@ -386,10 +386,10 @@ impl Legatio {
         match InputEvent::from(key_event) {
             InputEvent::Select => {
                 // Fetch all projects
-                let projects = get_projects(pool).await.unwrap();
+                let projects = get_projects(pool).await?;
                 if !projects.is_empty() {
                     let (_, str_names) = build_select_project(&projects);
-                    if let Some(selected_project) = item_selector(str_names.clone()).unwrap() {
+                    if let Some(selected_project) = item_selector(str_names.clone())? {
                         let sel_idx = str_names
                             .iter()
                             .position(|p| *p == selected_project)
@@ -403,7 +403,7 @@ impl Legatio {
                 } else {
                     let selected_dir = select_files(None).unwrap().unwrap();
                     let project = Project::new(&selected_dir);
-                    store_project(pool, &project).await.unwrap();
+                    store_project(pool, &project).await?;
                     self.current_project = Some(project.clone());
                     return Ok(AppState::EditScrolls);
                 }
@@ -422,18 +422,16 @@ impl Legatio {
                 return Ok(AppState::EditScrolls);
             }
             InputEvent::Delete => {
-                let projects = get_projects(pool).await.unwrap();
+                let projects = get_projects(pool).await?;
                 if !projects.is_empty() {
                     let (_, str_names) = build_select_project(&projects);
-                    if let Some(selected_project) = item_selector(str_names.clone()).unwrap() {
+                    if let Some(selected_project) = item_selector(str_names.clone())? {
                         let sel_idx = str_names
                             .iter()
                             .position(|p| *p == selected_project)
                             .unwrap();
 
-                        delete_project(pool, &projects[sel_idx].project_id)
-                            .await
-                            .unwrap();
+                        delete_project(pool, &projects[sel_idx].project_id).await?;
                     } else {
                         return Ok(AppState::SelectProject);
                     }
@@ -458,7 +456,7 @@ impl Legatio {
         match InputEvent::from(key_event) {
             InputEvent::Select => {
                 if let Some(project) = &self.current_project {
-                    let prompts = get_prompts(pool, &project.project_id).await.unwrap();
+                    let prompts = get_prompts(pool, &project.project_id).await?;
                     if !prompts.is_empty() {
                         let project_name = project
                             .project_path
@@ -473,9 +471,7 @@ impl Legatio {
                         }
                         concat_prompts.reverse();
 
-                        if let Some(selected_prompt) =
-                            item_selector(concat_prompts.clone()).unwrap()
-                        {
+                        if let Some(selected_prompt) = item_selector(concat_prompts.clone())? {
                             let mut idx = concat_prompts
                                 .iter()
                                 .position(|p| p == &selected_prompt)
@@ -488,11 +484,10 @@ impl Legatio {
                                     project,
                                     Some(&prompts),
                                     self.current_prompt.as_ref(),
-                                )
-                                .unwrap();
+                                )?;
                             } else {
                                 self.current_prompt = None;
-                                chain_into_canvas(project, None, None).unwrap();
+                                chain_into_canvas(project, None, None)?;
                             }
                         } else {
                             enable_raw_mode()?;
@@ -504,7 +499,7 @@ impl Legatio {
             }
             InputEvent::Delete => {
                 if let Some(project) = &self.current_project {
-                    let prompts = get_prompts(pool, &project.project_id).await.unwrap();
+                    let prompts = get_prompts(pool, &project.project_id).await?;
                     let project_name = project
                         .project_path
                         .split('/')
@@ -517,12 +512,12 @@ impl Legatio {
                         concat_prompts.push(format!("{}\n{}", p_str, o_str));
                     }
 
-                    if let Some(selected_prompt) = item_selector(concat_prompts.clone()).unwrap() {
+                    if let Some(selected_prompt) = item_selector(concat_prompts.clone())? {
                         let index = concat_prompts
                             .iter()
                             .position(|p| p == &selected_prompt)
                             .unwrap();
-                        delete_prompt(pool, &prompts[index]).await.unwrap();
+                        delete_prompt(pool, &prompts[index]).await?;
                     } else {
                         return Ok(AppState::SelectPrompt);
                     }
@@ -554,15 +549,15 @@ impl Legatio {
         match InputEvent::from(key_event) {
             InputEvent::AskModel => {
                 if let Some(project) = &self.current_project {
-                    let scrolls = get_scrolls(pool, &project.project_id).await.unwrap();
+                    let scrolls = get_scrolls(pool, &project.project_id).await?;
                     let mut new_scrolls = Vec::new();
                     for scroll in scrolls.iter() {
-                        let new_scroll = update_scroll_content(pool, scroll).await.unwrap();
+                        let new_scroll = update_scroll_content(pool, scroll).await?;
                         new_scrolls.push(new_scroll);
                     }
                     let sys_prompt = system_prompt(&new_scrolls).await;
 
-                    let prompts = get_prompts(pool, &project.project_id).await.unwrap();
+                    let prompts = get_prompts(pool, &project.project_id).await?;
 
                     let mut chain: Option<Vec<Prompt>> = None;
                     if let Some(curr_prompt) = &self.current_prompt {
@@ -577,9 +572,7 @@ impl Legatio {
                         user_input: final_prompt.to_owned(),
                     };
 
-                    let output = ask_question(self.user_config.as_ref().unwrap(), question)
-                        .await
-                        .unwrap();
+                    let output = ask_question(self.user_config.as_ref().unwrap(), question).await?;
 
                     let new_prompt = Prompt::new(
                         &project.project_id,
@@ -591,14 +584,13 @@ impl Legatio {
                             .map_or(project.project_id.clone(), |p| p.prompt_id.clone()),
                     );
 
-                    store_prompt(pool, &new_prompt).await.unwrap();
+                    store_prompt(pool, &new_prompt).await?;
                     self.current_prompt = Some(new_prompt);
 
                     let mut new_prompts = prompts.clone();
                     new_prompts.push(self.current_prompt.as_ref().unwrap().clone());
 
-                    chain_into_canvas(project, Some(&new_prompts), self.current_prompt.as_ref())
-                        .unwrap();
+                    chain_into_canvas(project, Some(&new_prompts), self.current_prompt.as_ref())?;
                 }
             }
             InputEvent::SwitchBranch => {
@@ -644,14 +636,14 @@ impl Legatio {
             }
             InputEvent::Delete => {
                 if let Some(project) = &self.current_project {
-                    let scrolls = get_scrolls(pool, &project.project_id).await.unwrap();
+                    let scrolls = get_scrolls(pool, &project.project_id).await?;
                     let scroll_names = scrolls
                         .iter()
                         .map(|s| s.scroll_path.clone())
                         .collect::<Vec<_>>();
 
                     disable_raw_mode()?;
-                    if let Some(selected_scroll) = item_selector(scroll_names.clone()).unwrap() {
+                    if let Some(selected_scroll) = item_selector(scroll_names.clone())? {
                         enable_raw_mode()?;
                         let idx = scroll_names
                             .iter()
@@ -659,7 +651,7 @@ impl Legatio {
                             .unwrap();
 
                         if idx < scrolls.len() {
-                            delete_scroll(pool, &scrolls[idx].scroll_id).await.unwrap();
+                            delete_scroll(pool, &scrolls[idx].scroll_id).await?;
                         }
                     } else {
                         enable_raw_mode()?;

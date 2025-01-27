@@ -40,7 +40,7 @@ pub async fn store_prompt(pool: &SqlitePool, prompt: &Prompt) -> Result<()> {
 
 // Sorted from first to last prompt on the list
 pub async fn get_prompts(pool: &SqlitePool, project_id: &str) -> Result<Vec<Prompt>> {
-    let prompts: Vec<Prompt> = sqlx::query_as::<_, Prompt>(
+    let prompts = sqlx::query_as::<_, Prompt>(
         "SELECT * 
         FROM prompts
         WHERE project_id = $1;",
@@ -48,7 +48,18 @@ pub async fn get_prompts(pool: &SqlitePool, project_id: &str) -> Result<Vec<Prom
     .bind(project_id)
     .fetch_all(pool)
     .await
-    .unwrap();
+    .map_err(|err| {
+        log_error(&format!(
+            "Failed to get prompts for project_id {}. Reason: {}",
+            project_id.to_owned(),
+            err
+        ));
+        AppError::DatabaseError(format!(
+            "Failed to get prompts for project_id {}. Reason: {}",
+            project_id.to_owned(),
+            err
+        ))
+    })?;
 
     Ok(prompts)
 }
