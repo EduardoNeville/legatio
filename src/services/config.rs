@@ -1,13 +1,13 @@
+use anyhow::Result;
+use dirs_next::config_dir;
 use serde::Deserialize;
 use serde::Serialize;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
-use anyhow::Result;
-use dirs_next::config_dir;
 
-use crate::utils::{logger::log_error, error::AppError};
+use crate::utils::{error::AppError, logger::log_error};
 
 #[derive(Debug, Deserialize, Serialize)] // Add Serialize to support serialization
 pub struct UserConfig {
@@ -46,34 +46,32 @@ pub fn read_config() -> Result<UserConfig> {
     let config_dir = get_config_dir()?;
     let config_path = config_dir.join("config.toml");
     // Read the file content as a string
-    let toml_content = fs::read_to_string(&config_path)
-        .map_err(|e| {
-            log_error(&format!(
-                "Failed to read file {}: {}",
-                &config_path.to_string_lossy(),
-                e
-            ));
-            AppError::FileError(format!(
-                "Failed to read file {}: {}",
-                &config_path.to_string_lossy(),
-                e
-            ))
-        })?;
-    
+    let toml_content = fs::read_to_string(&config_path).map_err(|e| {
+        log_error(&format!(
+            "Failed to read file {}: {}",
+            &config_path.to_string_lossy(),
+            e
+        ));
+        AppError::FileError(format!(
+            "Failed to read file {}: {}",
+            &config_path.to_string_lossy(),
+            e
+        ))
+    })?;
+
     // Parse the TOML content into the UserConfig struct
-    let configs: UserConfig = toml::from_str(&toml_content)
-        .map_err(|e| {
-            log_error(&format!(
-                "Failed to parse file {}: {}",
-                &config_path.to_string_lossy(),
-                e
-            ));
-            AppError::FileError(format!(
-                "Failed to parse file {}: {}",
-                &config_path.to_string_lossy(),
-                e
-            ))
-        })?;
+    let configs: UserConfig = toml::from_str(&toml_content).map_err(|e| {
+        log_error(&format!(
+            "Failed to parse file {}: {}",
+            &config_path.to_string_lossy(),
+            e
+        ));
+        AppError::FileError(format!(
+            "Failed to parse file {}: {}",
+            &config_path.to_string_lossy(),
+            e
+        ))
+    })?;
 
     Ok(configs)
 }
@@ -86,7 +84,7 @@ pub fn store_config(user_config: &UserConfig) -> Result<()> {
 
     let toml_content =
         toml::to_string(user_config).map_err(|e| AppError::UnexpectedError(e.to_string()))?;
-    
+
     // Open the file for writing (create or truncate)
     let mut file = File::create(&config_path).map_err(|e| {
         log_error(&format!(
@@ -100,7 +98,7 @@ pub fn store_config(user_config: &UserConfig) -> Result<()> {
             e
         ))
     })?;
-    
+
     // Write the TOML content to the file
     file.write_all(toml_content.as_bytes()).map_err(|e| {
         log_error(&format!(
@@ -117,4 +115,3 @@ pub fn store_config(user_config: &UserConfig) -> Result<()> {
 
     Ok(())
 }
-

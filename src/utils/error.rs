@@ -8,9 +8,9 @@ pub enum AppError {
     FileError(String),
     ParseError(String),
     UnexpectedError(String),
-    ModelError{
+    ModelError {
         model_name: String,
-        failure_str: String
+        failure_str: String,
     },
 }
 
@@ -22,7 +22,14 @@ impl fmt::Display for AppError {
             AppError::FileError(msg) => write!(f, "File operation failed: {}", msg),
             AppError::ParseError(msg) => write!(f, "Parse operation failed: {}", msg),
             AppError::UnexpectedError(msg) => write!(f, "Unexpected or unknown error: {}", msg),
-            AppError::ModelError { model_name, failure_str } => write!(f, "Error requesting answer from {}. Error: {}", model_name, failure_str),
+            AppError::ModelError {
+                model_name,
+                failure_str,
+            } => write!(
+                f,
+                "Error requesting answer from {}. Error: {}",
+                model_name, failure_str
+            ),
         }
     }
 }

@@ -1,19 +1,19 @@
 use std::fs;
 
 use anyhow::{Context, Ok, Result};
-use sqlx::SqlitePool;
 use ratatui::style::Color;
+use sqlx::SqlitePool;
 
 use crate::{
     core::{
         prompt::{format_prompt, format_prompt_depth},
         scroll::get_scrolls,
-    }, 
+    },
     utils::{
+        error::AppError,
         logger::log_error,
-        structs::{Project, Prompt}, 
-        error::AppError
-    }
+        structs::{Project, Prompt},
+    },
 };
 
 use toml::Value;
@@ -99,11 +99,18 @@ pub fn extract_theme_colors(theme_name: &str) -> Result<ThemeColors> {
     let themes_path = config_dir.join("themes.toml");
 
     // Read the themes.toml file
-    let themes_content = fs::read_to_string(&themes_path)
-        .map_err(|e| {
-           log_error(&format!("Failed to read file {}: {}", themes_path.to_string_lossy(), e));
-           AppError::FileError(format!("Failed to read file {}: {}", themes_path.to_string_lossy(), e))
-        })?;
+    let themes_content = fs::read_to_string(&themes_path).map_err(|e| {
+        log_error(&format!(
+            "Failed to read file {}: {}",
+            themes_path.to_string_lossy(),
+            e
+        ));
+        AppError::FileError(format!(
+            "Failed to read file {}: {}",
+            themes_path.to_string_lossy(),
+            e
+        ))
+    })?;
 
     // Parse TOML file into a generic Value
     let themes_toml: Value = themes_content.parse::<Value>().map_err(|e| {
@@ -119,10 +126,28 @@ pub fn extract_theme_colors(theme_name: &str) -> Result<ThemeColors> {
             if let Some(name) = theme.get("name").and_then(|n| n.as_str()) {
                 if name == theme_name {
                     return Ok(ThemeColors {
-                        background: hex_to_tui_color(theme.get("background").and_then(|b| b.as_str()).unwrap_or("#")).unwrap_or(default),
-                        primary: hex_to_tui_color(theme.get("primary").and_then(|p| p.as_str()).unwrap_or("#")).unwrap_or(default),
-                        secondary: hex_to_tui_color(theme.get("secondary").and_then(|s| s.as_str()).unwrap_or("#")).unwrap_or(default),
-                        accent: hex_to_tui_color(theme.get("accent").and_then(|a| a.as_str()).unwrap_or("#")).unwrap_or(default),
+                        background: hex_to_tui_color(
+                            theme
+                                .get("background")
+                                .and_then(|b| b.as_str())
+                                .unwrap_or("#"),
+                        )
+                        .unwrap_or(default),
+                        primary: hex_to_tui_color(
+                            theme.get("primary").and_then(|p| p.as_str()).unwrap_or("#"),
+                        )
+                        .unwrap_or(default),
+                        secondary: hex_to_tui_color(
+                            theme
+                                .get("secondary")
+                                .and_then(|s| s.as_str())
+                                .unwrap_or("#"),
+                        )
+                        .unwrap_or(default),
+                        accent: hex_to_tui_color(
+                            theme.get("accent").and_then(|a| a.as_str()).unwrap_or("#"),
+                        )
+                        .unwrap_or(default),
                     });
                 }
             }
@@ -149,34 +174,43 @@ fn hex_to_tui_color(hex: &str) -> Result<Color> {
         r = u8::from_str_radix(&hex[0..2], 16)
             .map_err(|err| {
                 log_error(&format!(
-                    "Invalid red component in: {}, error: {}", hex, err
+                    "Invalid red component in: {}, error: {}",
+                    hex, err
                 ));
                 AppError::ParseError(format!(
-                    "Invalid red component in: {}. Reason: {}", hex, err
+                    "Invalid red component in: {}. Reason: {}",
+                    hex, err
                 ));
-            }).unwrap();
+            })
+            .unwrap();
     }
     if hex_len >= 4 {
         g = u8::from_str_radix(&hex[2..4], 16)
             .map_err(|err| {
                 log_error(&format!(
-                    "Invalid green component in: {}, error: {}", hex, err
+                    "Invalid green component in: {}, error: {}",
+                    hex, err
                 ));
                 AppError::ParseError(format!(
-                    "Invalid green component in: {}. Reason: {}", hex, err
+                    "Invalid green component in: {}. Reason: {}",
+                    hex, err
                 ));
-            }).unwrap();
+            })
+            .unwrap();
     }
     if hex_len == 6 {
         b = u8::from_str_radix(&hex[4..6], 16)
             .map_err(|err| {
                 log_error(&format!(
-                    "Invalid blue component in: {}, error: {}", hex, err
+                    "Invalid blue component in: {}, error: {}",
+                    hex, err
                 ));
                 AppError::ParseError(format!(
-                    "Invalid blue component in: {}. Reason: {}", hex, err
+                    "Invalid blue component in: {}. Reason: {}",
+                    hex, err
                 ));
-            }).unwrap();
+            })
+            .unwrap();
     }
 
     Ok(Color::Rgb(r, g, b))

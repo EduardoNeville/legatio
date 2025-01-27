@@ -1,4 +1,7 @@
-use crate::{services::config::get_config_dir, utils::logger::{log_error, log_info}};
+use crate::{
+    services::config::get_config_dir,
+    utils::logger::{log_error, log_info},
+};
 use anyhow::Result;
 use sqlx::{migrate::MigrateDatabase, sqlite::SqlitePool, Sqlite};
 
@@ -7,7 +10,7 @@ use super::error::AppError;
 /// Get the path of the database file inside the Legatio directory.
 fn get_db_path() -> Result<String> {
     let config_dir = get_config_dir()?;
-    let db_url = format!("sqlite://{}/legatio.db",config_dir.to_string_lossy());
+    let db_url = format!("sqlite://{}/legatio.db", config_dir.to_string_lossy());
     Ok(db_url)
 }
 

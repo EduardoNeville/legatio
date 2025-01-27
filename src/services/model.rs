@@ -3,25 +3,16 @@ use openai_api_rs::v1::api::OpenAIClient;
 use openai_api_rs::v1::chat_completion::{self, ChatCompletionMessage, ChatCompletionRequest};
 use std::env;
 
-use crate::utils::{
-    error::AppError,
-    logger::log_error,
-    structs::Prompt
-};
+use crate::utils::{error::AppError, logger::log_error, structs::Prompt};
 
 pub struct Question {
     pub system_prompt: Option<String>,
     pub messages: Option<Vec<Prompt>>,
-    pub user_input: String
+    pub user_input: String,
 }
 
-
-/// This function is used to query using the openai API 
-async fn get_openai_response(
-    question: Question,
-    model: &str
-) -> Result<String> {
-
+/// This function is used to query using the openai API
+async fn get_openai_response(question: Question, model: &str) -> Result<String> {
     // Retrieve the OpenAI API key from the environment securely
     let api_key =
         env::var("OPENAI_API_KEY").context("Missing OPENAI_API_KEY environment variable")?;
@@ -86,12 +77,11 @@ async fn get_openai_response(
     let result = client.chat_completion(req).await.map_err(|e| {
         log_error(&format!(
             "Failed to receive answer from {}. With error: {}",
-            model,
-            e
+            model, e
         ));
-        AppError::ModelError{
+        AppError::ModelError {
             model_name: model.to_owned(),
-            failure_str: e.to_string()
+            failure_str: e.to_string(),
         }
     })?;
     let answer = result.choices[0].message.content.clone().unwrap();
@@ -99,19 +89,12 @@ async fn get_openai_response(
     Ok(answer)
 }
 
-pub async fn ask_question (
-    llm: &str,
-    model: &str,
-    question: Question,
-) -> Result<String> {
+pub async fn ask_question(llm: &str, model: &str, question: Question) -> Result<String> {
     match llm {
         "openai" => {
             let ans = get_openai_response(question, model).await?;
             Ok(ans)
-        },
-        _ => {
-            Ok(String::from("Not finished"))
-        },
+        }
+        _ => Ok(String::from("Not finished")),
     }
-
 }

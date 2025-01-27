@@ -23,12 +23,13 @@ use crate::{
             delete_prompt, format_prompt, get_prompts, prompt_chain, store_prompt, system_prompt,
         },
         scroll::{delete_scroll, get_scrolls, read_file, store_scroll, update_scroll_content},
-    }, services::{
+    },
+    services::{
         config::{read_config, store_config, UserConfig},
         display::{AppState, InputEvent},
         model::{ask_question, Question},
         search::{item_selector, select_files},
-        ui::{extract_theme_colors, usr_prompt_chain, usr_prompts, usr_scrolls}
+        ui::{extract_theme_colors, usr_prompt_chain, usr_prompts, usr_scrolls},
     },
     utils::structs::{Project, Prompt},
 };
@@ -63,7 +64,7 @@ impl Legatio {
         let default_config = UserConfig {
             llm: String::from("openai"),
             model: String::from("chatgpt-4o-latest"),
-            theme: String::from("Tokyo Storm")
+            theme: String::from("Tokyo Storm"),
         };
         self.user_config = Some(read_config().unwrap_or(default_config));
         store_config(self.user_config.as_ref().unwrap()).unwrap();
@@ -560,13 +561,13 @@ impl Legatio {
                     let question = Question {
                         system_prompt: Some(sys_prompt),
                         messages: chain,
-                        user_input: final_prompt.to_owned()
+                        user_input: final_prompt.to_owned(),
                     };
 
                     let output = ask_question(
                         &self.user_config.as_ref().unwrap().llm,
                         &self.user_config.as_ref().unwrap().model,
-                        question
+                        question,
                     )
                     .await
                     .unwrap();
@@ -619,7 +620,9 @@ impl Legatio {
             InputEvent::New => {
                 if let Some(project) = &self.current_project {
                     disable_raw_mode()?;
-                    let selected_scrolls = select_files(Some(&project.project_path)).unwrap().unwrap_or(String::from(""));
+                    let selected_scrolls = select_files(Some(&project.project_path))
+                        .unwrap()
+                        .unwrap_or(String::from(""));
                     enable_raw_mode()?;
                     let new_scroll =
                         read_file(&selected_scrolls, &project.project_id, None).unwrap();
