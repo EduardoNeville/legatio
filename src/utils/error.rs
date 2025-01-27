@@ -1,7 +1,6 @@
 use std::error::Error;
 use std::fmt;
 
-/// Define crate-wide error types without using `thiserror`.
 #[derive(Debug)]
 pub enum AppError {
     DatabaseError(String),

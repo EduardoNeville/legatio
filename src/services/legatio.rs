@@ -43,6 +43,12 @@ pub struct Legatio {
     user_config: Option<UserConfig>,
 }
 
+impl Default for Legatio {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Legatio {
     pub fn new() -> Self {
         Legatio {
