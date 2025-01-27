@@ -71,6 +71,7 @@ impl Legatio {
             llm: String::from("openai"),
             model: String::from("chatgpt-4o-latest"),
             theme: String::from("Tokyo Storm"),
+            max_token: None,
         };
         self.user_config = Some(read_config().unwrap_or(default_config));
         store_config(self.user_config.as_ref().unwrap()).unwrap();
@@ -571,9 +572,8 @@ impl Legatio {
                     };
 
                     let output = ask_question(
-                        &self.user_config.as_ref().unwrap().llm,
-                        &self.user_config.as_ref().unwrap().model,
-                        question,
+                        self.user_config.as_ref().unwrap(),
+                        question
                     )
                     .await
                     .unwrap();
