@@ -409,13 +409,9 @@ impl Legatio {
                 }
             }
             InputEvent::New => {
-                let selected_dir = select_files(None)
-                    .unwrap()
-                    .unwrap();
+                let selected_dir = select_files(None).unwrap().unwrap();
                 let projects = get_projects(pool).await?;
-                let old_proj = projects
-                    .iter()
-                    .find(|p| p.project_path == selected_dir);
+                let old_proj = projects.iter().find(|p| p.project_path == selected_dir);
                 if old_proj.is_some() {
                     self.current_project = Some(old_proj.unwrap().to_owned());
                 } else {
@@ -638,15 +634,9 @@ impl Legatio {
                         .unwrap_or(String::from(""));
                     enable_raw_mode()?;
                     let scrolls = get_scrolls(pool, &project.project_id).await?;
-                    let old_scroll = scrolls
-                        .iter()
-                        .find(|s| s.scroll_path == selected_scroll);
+                    let old_scroll = scrolls.iter().find(|s| s.scroll_path == selected_scroll);
                     if old_scroll.is_none() {
-                        let new_scroll = read_file(
-                            &selected_scroll,
-                            &project.project_id,
-                            None
-                        )?;
+                        let new_scroll = read_file(&selected_scroll, &project.project_id, None)?;
                         store_scroll(pool, &new_scroll).await?;
                     }
                 }

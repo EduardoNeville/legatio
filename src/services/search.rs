@@ -6,10 +6,7 @@ use nucleo_picker::{nucleo::Config, render::StrRenderer, PickerOptions, Render};
 
 use anyhow::Result;
 
-use crate::utils::{
-    error::AppError,
-    logger::log_error,
-};
+use crate::utils::{error::AppError, logger::log_error};
 
 pub struct DirEntryRender;
 
@@ -63,17 +60,10 @@ pub fn select_files(dir_path: Option<&str>) -> Result<Option<String>> {
 }
 
 pub fn item_selector(items: Vec<String>) -> Result<Option<String>> {
-    disable_raw_mode()
-        .map_err(|e| {
-            log_error(&format!(
-                "Failed to disable raw mode. Reason: {}",
-                e
-            ));
-            AppError::UnexpectedError(format!(
-                "Failed to disable raw mode. Reason: {}",
-                e
-            ))
-        })?;
+    disable_raw_mode().map_err(|e| {
+        log_error(&format!("Failed to disable raw mode. Reason: {}", e));
+        AppError::UnexpectedError(format!("Failed to disable raw mode. Reason: {}", e))
+    })?;
 
     let mut picker = PickerOptions::default()
         .config(Config::DEFAULT.match_paths())
@@ -87,26 +77,14 @@ pub fn item_selector(items: Vec<String>) -> Result<Option<String>> {
     let sel_item: Option<String> = picker
         .pick()
         .map_err(|e| {
-            log_error(&format!(
-                "Picker failed to pick an item. Reason: {}",
-                e
-            ));
-            AppError::UnexpectedError(format!(
-                "Picker failed to pick an item. Reason: {}",
-                e
-            ))
+            log_error(&format!("Picker failed to pick an item. Reason: {}", e));
+            AppError::UnexpectedError(format!("Picker failed to pick an item. Reason: {}", e))
         })?
         .map(|opt| opt.to_string());
 
     enable_raw_mode().map_err(|e| {
-        log_error(&format!(
-            "Failed to enable raw mode. Reason: {}",
-            e
-        ));
-        AppError::UnexpectedError(format!(
-            "Failed to enable raw mode. Reason: {}",
-            e
-        ))
+        log_error(&format!("Failed to enable raw mode. Reason: {}", e));
+        AppError::UnexpectedError(format!("Failed to enable raw mode. Reason: {}", e))
     })?;
 
     Ok(sel_item)
