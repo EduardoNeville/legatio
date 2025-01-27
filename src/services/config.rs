@@ -8,8 +8,8 @@ use std::io::Write;
 use std::path::PathBuf;
 
 use crate::{
+    services::model::LLM,
     utils::{error::AppError, logger::log_error},
-    services::model::LLM
 };
 
 #[derive(Debug, Deserialize, Serialize)] // Add Serialize to support serialization
@@ -17,7 +17,7 @@ pub struct UserConfig {
     pub llm: LLM,
     pub model: String,
     pub theme: String,
-    pub max_token: Option<i8>,
+    pub max_token: Option<u32>,
 }
 
 /// Get the Legatio configuration directory inside `$HOME/.config/legatio`.

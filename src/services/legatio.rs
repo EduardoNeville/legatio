@@ -27,7 +27,7 @@ use crate::{
     services::{
         config::{read_config, store_config, UserConfig},
         display::{AppState, InputEvent},
-        model::{ask_question, Question},
+        model::{ask_question, Question, LLM},
         search::{item_selector, select_files},
         ui::{extract_theme_colors, usr_prompt_chain, usr_prompts, usr_scrolls},
     },
@@ -68,7 +68,7 @@ impl Legatio {
 
         // Default config for user
         let default_config = UserConfig {
-            llm: String::from("openai"),
+            llm: LLM::OpenAI,
             model: String::from("chatgpt-4o-latest"),
             theme: String::from("Tokyo Storm"),
             max_token: None,
@@ -571,12 +571,9 @@ impl Legatio {
                         user_input: final_prompt.to_owned(),
                     };
 
-                    let output = ask_question(
-                        self.user_config.as_ref().unwrap(),
-                        question
-                    )
-                    .await
-                    .unwrap();
+                    let output = ask_question(self.user_config.as_ref().unwrap(), question)
+                        .await
+                        .unwrap();
 
                     let new_prompt = Prompt::new(
                         &project.project_id,
