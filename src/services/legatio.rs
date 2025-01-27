@@ -23,17 +23,14 @@ use crate::{
             delete_prompt, format_prompt, get_prompts, prompt_chain, store_prompt, system_prompt,
         },
         scroll::{delete_scroll, get_scrolls, read_file, store_scroll, update_scroll_content},
-    },
-    services::{
+    }, services::{
+        config::{read_config, store_config, UserConfig},
         display::{AppState, InputEvent},
-        model::get_openai_response,
+        model::{ask_question, Question},
         search::{item_selector, select_files},
-        ui::{usr_prompt_chain, usr_prompts, usr_scrolls},
+        ui::{extract_theme_colors, usr_prompt_chain, usr_prompts, usr_scrolls}
     },
-    utils::{
-        logger::log_info,
-        structs::{Project, Prompt},
-    },
+    utils::structs::{Project, Prompt},
 };
 use anyhow::Result;
 use sqlx::SqlitePool;
@@ -42,12 +39,7 @@ pub struct Legatio {
     state: AppState,
     current_project: Option<Project>,
     current_prompt: Option<Prompt>,
-}
-
-impl Default for Legatio {
-    fn default() -> Self {
-        Self::new()
-    }
+    user_config: Option<UserConfig>,
 }
 
 impl Legatio {
@@ -56,6 +48,7 @@ impl Legatio {
             state: AppState::SelectProject,
             current_project: None,
             current_prompt: None,
+            user_config: None,
         }
     }
 
@@ -65,6 +58,15 @@ impl Legatio {
         let mut stdout = io::stdout();
         let backend = CrosstermBackend::new(&mut stdout);
         let mut terminal = Terminal::new(backend)?;
+
+        // Default config for user
+        let default_config = UserConfig {
+            llm: String::from("openai"),
+            model: String::from("chatgpt-4o-latest"),
+            theme: String::from("Tokyo Storm")
+        };
+        self.user_config = Some(read_config().unwrap_or(default_config));
+        store_config(self.user_config.as_ref().unwrap()).unwrap();
 
         // Ensure we disable raw mode when application exits
         let result = self.main_loop(&mut terminal, pool).await;
@@ -101,7 +103,12 @@ impl Legatio {
         pool: &SqlitePool,
     ) -> Result<()> {
         // Prepare all the data we might need to render
-        //
+        let theme = &self.user_config.as_ref().unwrap().theme;
+        let colors = extract_theme_colors(theme).unwrap();
+        let primary_color = colors.primary;
+        let secondary_color = colors.secondary;
+        let accent_color = colors.accent;
+
         let top_title = format_project_title(&self.current_project);
         let top_text: Vec<Line>;
         let mut scroll_title: Option<&str> = None;
@@ -253,6 +260,9 @@ impl Legatio {
             scroll_items,
             &bot_title,
             &bot_items,
+            primary_color,
+            secondary_color,
+            accent_color,
         )
     }
 
@@ -265,6 +275,9 @@ impl Legatio {
         scroll_text: Option<Vec<Line>>,
         bot_title: &str,
         bot_items: &[Line],
+        primary_color: Color,
+        secondary_color: Color,
+        accent_color: Color,
     ) -> Result<()> {
         // Top box
         let top_box = Paragraph::new(top_text.to_owned())
@@ -272,9 +285,10 @@ impl Legatio {
                 Block::default()
                     .borders(Borders::ALL)
                     .border_type(BorderType::Thick)
+                    .style(Style::default().fg(primary_color))
                     .title(top_title),
             )
-            .style(Style::default().fg(Color::LightBlue));
+            .style(Style::default().fg(secondary_color));
 
         // Scroll box
         let (scroll_box, constraints) =
@@ -285,9 +299,10 @@ impl Legatio {
                         Block::default()
                             .borders(Borders::ALL)
                             .border_type(BorderType::Thick)
+                            .style(Style::default().fg(primary_color))
                             .title(title),
                     )
-                    .style(Style::default().fg(Color::LightBlue));
+                    .style(Style::default().fg(secondary_color));
 
                 let constraints = Vec::from([
                     Constraint::Percentage(18),
@@ -310,9 +325,10 @@ impl Legatio {
                 Block::default()
                     .borders(Borders::ALL)
                     .border_type(BorderType::Thick)
+                    .style(Style::default().fg(accent_color))
                     .title(bot_title),
             )
-            .style(Style::default().fg(Color::LightBlue));
+            .style(Style::default().fg(secondary_color));
 
         // Terminal draw
         terminal.draw(|f| {
@@ -451,13 +467,6 @@ impl Legatio {
                                 .position(|p| p == &selected_prompt)
                                 .unwrap();
 
-                            log_info(&format!(
-                                "Selected: {:?} | idx: {} | len: {}",
-                                selected_prompt,
-                                idx,
-                                prompts.len()
-                            ));
-
                             if idx < prompts.len() {
                                 idx = prompts.len() - 1 - idx;
                                 self.current_prompt = prompts.get(idx).map(|p| p.to_owned());
@@ -545,14 +554,22 @@ impl Legatio {
                     if let Some(curr_prompt) = &self.current_prompt {
                         chain = Some(prompt_chain(&prompts, curr_prompt));
                     }
-                    log_info(&format!("Curr prompt: {:?}", self.current_prompt.as_ref()));
 
-                    let final_prompt = chain_match_canvas(project).unwrap();
-                    log_info(&format!("Question: {}", final_prompt));
+                    let final_prompt = chain_match_canvas(project).unwrap_or(String::from("."));
 
-                    let output = get_openai_response(&sys_prompt, chain, &final_prompt)
-                        .await
-                        .unwrap();
+                    let question = Question {
+                        system_prompt: Some(sys_prompt),
+                        messages: chain,
+                        user_input: final_prompt.to_owned()
+                    };
+
+                    let output = ask_question(
+                        &self.user_config.as_ref().unwrap().llm,
+                        &self.user_config.as_ref().unwrap().model,
+                        question
+                    )
+                    .await
+                    .unwrap();
 
                     let new_prompt = Prompt::new(
                         &project.project_id,
@@ -567,7 +584,6 @@ impl Legatio {
                     store_prompt(pool, &new_prompt).await.unwrap();
                     self.current_prompt = Some(new_prompt);
 
-                    log_info(&format!("New prompt: {:?}", self.current_prompt.as_ref()));
                     let mut new_prompts = prompts.clone();
                     new_prompts.push(self.current_prompt.as_ref().unwrap().clone());
 
@@ -603,8 +619,7 @@ impl Legatio {
             InputEvent::New => {
                 if let Some(project) = &self.current_project {
                     disable_raw_mode()?;
-                    let selected_scrolls =
-                        select_files(Some(&project.project_path)).unwrap().unwrap();
+                    let selected_scrolls = select_files(Some(&project.project_path)).unwrap().unwrap_or(String::from(""));
                     enable_raw_mode()?;
                     let new_scroll =
                         read_file(&selected_scrolls, &project.project_id, None).unwrap();

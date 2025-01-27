@@ -1,13 +1,20 @@
 use std::fs::{File, OpenOptions};
-use std::io::{self, Write};
+use std::io::Write;
 use std::sync::Mutex;
+
+use anyhow::Result;
+
+use crate::services::config::get_config_dir;
 
 // Global static variable for the log file, wrapped in an `Option<Mutex<File>>`
 static mut LOG_FILE: Option<Mutex<File>> = None;
 
 /// Initializes the logger with the specified log file path.
 /// Should be called once before logging any messages.
-pub fn initialize_logger(file_path: &str) -> io::Result<()> {
+pub fn initialize_logger(file_name: &str) -> Result<()> {
+    let config_path = get_config_dir()?;
+    let file_path = config_path.join(file_name);
+
     let file = OpenOptions::new()
         .create(true)
         .append(true)

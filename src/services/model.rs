@@ -1,17 +1,27 @@
 use anyhow::{Context, Result};
 use openai_api_rs::v1::api::OpenAIClient;
 use openai_api_rs::v1::chat_completion::{self, ChatCompletionMessage, ChatCompletionRequest};
-use openai_api_rs::v1::common::GPT4_O_LATEST; // Select model as per your use case
 use std::env;
 
-use crate::utils::logger::log_info;
-use crate::utils::structs::Prompt;
+use crate::utils::{
+    error::AppError,
+    logger::log_error,
+    structs::Prompt
+};
 
-pub async fn get_openai_response(
-    system_prompt: &str,
-    messages: Option<Vec<Prompt>>,
-    user_input: &str,
+pub struct Question {
+    pub system_prompt: Option<String>,
+    pub messages: Option<Vec<Prompt>>,
+    pub user_input: String
+}
+
+
+/// This function is used to query using the openai API 
+async fn get_openai_response(
+    question: Question,
+    model: &str
 ) -> Result<String> {
+
     // Retrieve the OpenAI API key from the environment securely
     let api_key =
         env::var("OPENAI_API_KEY").context("Missing OPENAI_API_KEY environment variable")?;
@@ -23,20 +33,18 @@ pub async fn get_openai_response(
         .unwrap();
 
     let mut msgs = vec![];
-    if !system_prompt.is_empty() {
-        log_info("system_prompt NOT EMPTY");
+    if question.system_prompt.is_some() {
         msgs.push(ChatCompletionMessage {
             role: chat_completion::MessageRole::system,
-            content: chat_completion::Content::Text(system_prompt.to_owned()),
+            content: chat_completion::Content::Text(question.system_prompt.unwrap()),
             name: None,
             tool_calls: None,
             tool_call_id: None,
         });
     }
 
-    if messages.is_some() {
-        log_info(&format!("Messages: \n{:?}", messages));
-        for msg in messages.unwrap().iter() {
+    if question.messages.is_some() {
+        for msg in question.messages.unwrap().iter() {
             msgs.push(ChatCompletionMessage {
                 role: chat_completion::MessageRole::user,
                 content: chat_completion::Content::Text(msg.content.to_owned()),
@@ -55,12 +63,11 @@ pub async fn get_openai_response(
         }
     }
 
-    let usr_input = if user_input.is_empty() {
+    let usr_input = if question.user_input.is_empty() {
         String::from(".")
     } else {
-        user_input.to_owned()
+        question.user_input.to_owned()
     };
-    log_info(&format!("User input: {}", usr_input));
 
     msgs.push(ChatCompletionMessage {
         role: chat_completion::MessageRole::user,
@@ -72,12 +79,39 @@ pub async fn get_openai_response(
 
     // Construct the chat completion request with the system and user messages
     let req = ChatCompletionRequest::new(
-        GPT4_O_LATEST.to_string(), // Replace this with your desired model
+        model.to_string(), // Replace this with your desired model
         msgs,
     );
 
-    let result = client.chat_completion(req).await.unwrap();
+    let result = client.chat_completion(req).await.map_err(|e| {
+        log_error(&format!(
+            "Failed to receive answer from {}. With error: {}",
+            model,
+            e
+        ));
+        AppError::ModelError{
+            model_name: model.to_owned(),
+            failure_str: e.to_string()
+        }
+    })?;
     let answer = result.choices[0].message.content.clone().unwrap();
 
     Ok(answer)
+}
+
+pub async fn ask_question (
+    llm: &str,
+    model: &str,
+    question: Question,
+) -> Result<String> {
+    match llm {
+        "openai" => {
+            let ans = get_openai_response(question, model).await?;
+            Ok(ans)
+        },
+        _ => {
+            Ok(String::from("Not finished"))
+        },
+    }
+
 }
