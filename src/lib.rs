@@ -12,7 +12,6 @@ pub use crate::utils::error::*;
 pub use crate::utils::logger::*;
 pub use crate::utils::structs::*;
 
-pub use crate::services::display::*;
 pub use crate::services::legatio::*;
 pub use crate::services::model::*;
 pub use crate::services::search::*;

@@ -18,6 +18,7 @@ pub struct UserConfig {
     pub model: String,
     pub theme: String,
     pub max_token: Option<u32>,
+    pub ask_conf: bool,
 }
 
 /// Get the Legatio configuration directory inside `$HOME/.config/legatio`.

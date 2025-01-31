@@ -1,5 +1,5 @@
 use crossterm::{
-    event::{self, Event, KeyEvent},
+    event::{self, Event, KeyCode, KeyEvent, KeyModifiers},
     terminal::{disable_raw_mode, enable_raw_mode},
 };
 use ratatui::layout::{Constraint, Direction, Layout};
@@ -26,7 +26,6 @@ use crate::{
     },
     services::{
         config::{read_config, store_config, UserConfig},
-        display::{AppState, InputEvent},
         model::{ask_question, Question, LLM},
         search::{item_selector, select_files},
         ui::{extract_theme_colors, usr_prompt_chain, usr_prompts, usr_scrolls},
@@ -41,6 +40,30 @@ pub struct Legatio {
     current_project: Option<Project>,
     current_prompt: Option<Prompt>,
     user_config: Option<UserConfig>,
+}
+
+#[derive(Clone, Copy)]
+enum AppState {
+    SelectProject,
+    SelectPrompt,
+    AskModel,
+    EditScrolls,
+    AskModelConfirmation,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum InputEvent {
+    Select,
+    New,
+    Delete,
+    SwitchBranch,
+    ChangeProject,
+    EditScrolls,
+    AskModel,
+    Quit,
+    Confirm,
+    Cancel,
+    NoOp,
 }
 
 impl Default for Legatio {
@@ -72,6 +95,7 @@ impl Legatio {
             model: String::from("chatgpt-4o-latest"),
             theme: String::from("Tokyo Storm"),
             max_token: None,
+            ask_conf: true,
         };
         self.user_config = Some(read_config().unwrap_or(default_config));
         store_config(self.user_config.as_ref().unwrap()).unwrap();
@@ -120,9 +144,10 @@ impl Legatio {
         let top_title = format_project_title(&self.current_project);
         let top_text: Vec<Line>;
         let mut scroll_title: Option<&str> = None;
-        let mut scroll_items: Option<Vec<Line>> = None;
+        let mut scroll_text: Option<Vec<Line>> = None;
         let mut bot_title = String::new();
         let mut bot_items: Vec<Line> = vec![];
+        let mut pop_up = false;
 
         match self.state {
             // Define UI for specific state
@@ -182,13 +207,13 @@ impl Legatio {
                 if let Some(project) = &self.current_project {
                     // Scroll PREP
                     let scrolls = usr_scrolls(pool, project).await?;
-                    // Initialize `scroll_items` if it hasn't been initialized
-                    if scroll_items.is_none() {
-                        scroll_items = Some(vec![]);
+                    // Initialize `scroll_text` if it hasn't been initialized
+                    if scroll_text.is_none() {
+                        scroll_text = Some(vec![]);
                     }
 
                     // Now safely modify the inner `Vec<Line>`
-                    if let Some(items) = scroll_items.as_mut() {
+                    if let Some(items) = scroll_text.as_mut() {
                         for scroll in scrolls {
                             items.push(Line::from(scroll)); // Mutable push happens here
                         }
@@ -257,6 +282,68 @@ impl Legatio {
                     }
                 }
             }
+            AppState::AskModelConfirmation => {
+                top_text = vec![
+                    Line::from("[a] Ask the Model"),
+                    Line::from("[b] Switch branch"),
+                    Line::from("[e] Edit Scrolls"),
+                    Line::from("[p] Change Project"),
+                    Line::from("[q] Quit"),
+                ];
+                scroll_title = Some("[ Scrolls ]");
+                bot_title = String::from("[ Prompts ]");
+                if let Some(project) = &self.current_project {
+                    // Scroll PREP
+                    let scrolls = usr_scrolls(pool, project).await?;
+                    // Initialize `scroll_text` if it hasn't been initialized
+                    if scroll_text.is_none() {
+                        scroll_text = Some(vec![]);
+                    }
+
+                    // Now safely modify the inner `Vec<Line>`
+                    if let Some(items) = scroll_text.as_mut() {
+                        for scroll in scrolls {
+                            items.push(Line::from(scroll)); // Mutable push happens here
+                        }
+                    }
+
+                    // Prompt PREP
+                    let prompt = self.current_prompt.as_ref();
+                    let file_prompt = fs::read_to_string(
+                        PathBuf::from(&self.current_project.as_ref().unwrap().project_path)
+                            .join("legatio.md"),
+                    );
+
+                    let prompts: Option<Vec<Prompt>>;
+                    let pmp_chain: Option<Vec<Prompt>>;
+                    if file_prompt.is_err() {
+                        File::create(
+                            PathBuf::from(&self.current_project.as_ref().unwrap().project_path)
+                                .join("legatio.md"),
+                        )
+                        .expect("Could not create file!");
+                    } else if prompt.is_some() {
+                        prompts = Some(get_prompts(pool, &project.project_id).await?);
+
+                        if prompts.as_ref().unwrap().is_empty() {
+                            bot_items.push(Line::from("This project has no prompts!"));
+                        } else {
+                            pmp_chain = Some(prompt_chain(
+                                prompts.as_ref().unwrap().as_ref(),
+                                self.current_prompt.as_ref().unwrap(),
+                            ));
+
+                            let p_strs = usr_prompt_chain(pmp_chain.as_ref().unwrap().as_ref());
+                            p_strs
+                                .iter()
+                                .for_each(|p| bot_items.push(Line::from(p.to_string())));
+                        }
+                    }
+                } else {
+                    bot_items.push(Line::from("No active project"));
+                }
+                pop_up = true;
+            }
         }
 
         // Call render function with prepared data
@@ -265,12 +352,13 @@ impl Legatio {
             &top_title,
             &top_text,
             scroll_title,
-            scroll_items,
+            scroll_text,
             &bot_title,
             &bot_items,
             primary_color,
             secondary_color,
             accent_color,
+            pop_up
         )
     }
 
@@ -286,9 +374,21 @@ impl Legatio {
         primary_color: Color,
         secondary_color: Color,
         accent_color: Color,
+        pop_up: bool,
     ) -> Result<()> {
         // Top box
-        let top_box = Paragraph::new(top_text.to_owned())
+        let top_box = if pop_up {
+            Paragraph::new(vec![Line::from("[y]es [n]o")])
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Thick)
+                    .style(Style::default().fg(accent_color))
+                    .title("[ Confirm ]"),
+            )
+            .style(Style::default().fg(secondary_color))
+        } else {
+            Paragraph::new(top_text.to_owned())
             .block(
                 Block::default()
                     .borders(Borders::ALL)
@@ -296,7 +396,8 @@ impl Legatio {
                     .style(Style::default().fg(primary_color))
                     .title(top_title),
             )
-            .style(Style::default().fg(secondary_color));
+            .style(Style::default().fg(secondary_color))
+        };
 
         // Scroll box
         let (scroll_box, constraints) =
@@ -360,18 +461,145 @@ impl Legatio {
         Ok(())
     }
 
+    fn state_specific_keys(&self, key_event: KeyEvent) -> InputEvent {
+        match self.state {
+            AppState::SelectProject => match key_event {
+                KeyEvent {
+                    code: KeyCode::Char('s'),
+                    modifiers: KeyModifiers::NONE,
+                    ..
+                } => InputEvent::Select,
+                KeyEvent {
+                    code: KeyCode::Char('n'),
+                    modifiers: KeyModifiers::NONE,
+                    ..
+                } => InputEvent::New,
+                KeyEvent {
+                    code: KeyCode::Char('d'),
+                    modifiers: KeyModifiers::NONE,
+                    ..
+                } => InputEvent::Delete,
+                KeyEvent {
+                    code: KeyCode::Char('q'),
+                    modifiers: KeyModifiers::NONE,
+                    ..
+                } => InputEvent::Quit,
+                _ => InputEvent::NoOp,
+            },
+            AppState::SelectPrompt => match key_event {
+                KeyEvent {
+                    code: KeyCode::Char('s'),
+                    modifiers: KeyModifiers::NONE,
+                    ..
+                } => InputEvent::Select,
+                KeyEvent {
+                    code: KeyCode::Char('d'),
+                    modifiers: KeyModifiers::NONE,
+                    ..
+                } => InputEvent::Delete,
+                KeyEvent {
+                    code: KeyCode::Char('p'),
+                    modifiers: KeyModifiers::NONE,
+                    ..
+                } => InputEvent::ChangeProject,
+                KeyEvent {
+                    code: KeyCode::Char('e'),
+                    modifiers: KeyModifiers::NONE,
+                    ..
+                } => InputEvent::EditScrolls,
+                KeyEvent {
+                    code: KeyCode::Char('q'),
+                    modifiers: KeyModifiers::NONE,
+                    ..
+                } => InputEvent::Quit,
+                _ => InputEvent::NoOp,
+            },
+            AppState::AskModel => match key_event {
+                KeyEvent {
+                    code: KeyCode::Char('a'),
+                    modifiers: KeyModifiers::NONE,
+                    ..
+                } => InputEvent::AskModel,
+                KeyEvent {
+                    code: KeyCode::Char('p'),
+                    modifiers: KeyModifiers::NONE,
+                    ..
+                } => InputEvent::ChangeProject,
+                KeyEvent {
+                    code: KeyCode::Char('e'),
+                    modifiers: KeyModifiers::NONE,
+                    ..
+                } => InputEvent::EditScrolls,
+                KeyEvent {
+                    code: KeyCode::Char('b'),
+                    modifiers: KeyModifiers::NONE,
+                    ..
+                } => InputEvent::SwitchBranch,
+                KeyEvent {
+                    code: KeyCode::Char('q'),
+                    modifiers: KeyModifiers::NONE,
+                    ..
+                } => InputEvent::Quit,
+                _ => InputEvent::NoOp,
+            },
+            AppState::EditScrolls => match key_event {
+                KeyEvent {
+                    code: KeyCode::Char('n'),
+                    modifiers: KeyModifiers::NONE,
+                    ..
+                } => InputEvent::New,
+                KeyEvent {
+                    code: KeyCode::Char('d'),
+                    modifiers: KeyModifiers::NONE,
+                    ..
+                } => InputEvent::Delete,
+                KeyEvent {
+                    code: KeyCode::Char('s'),
+                    modifiers: KeyModifiers::NONE,
+                    ..
+                } => InputEvent::SwitchBranch,
+                KeyEvent {
+                    code: KeyCode::Char('p'),
+                    modifiers: KeyModifiers::NONE,
+                    ..
+                } => InputEvent::ChangeProject,
+                KeyEvent {
+                    code: KeyCode::Char('a'),
+                    modifiers: KeyModifiers::NONE,
+                    ..
+                } => InputEvent::AskModel,
+                KeyEvent {
+                    code: KeyCode::Char('q'),
+                    modifiers: KeyModifiers::NONE,
+                    ..
+                } => InputEvent::Quit,
+                _ => InputEvent::NoOp,
+            },
+            AppState::AskModelConfirmation => match key_event {
+                KeyEvent {
+                    code: KeyCode::Char('y'),
+                    ..
+                } => InputEvent::Confirm,
+                KeyEvent {
+                    code: KeyCode::Char('n'),
+                    ..
+                } => InputEvent::Cancel,
+                _ => InputEvent::NoOp,
+            },
+        }
+    }
+
     async fn handle_input(&mut self, pool: &SqlitePool) -> Result<AppState> {
         if crossterm::event::poll(Duration::from_millis(100))? {
             if let Event::Key(key_event) = event::read()? {
+                let input_event = self.state_specific_keys(key_event); // Get state-specific keys
+                
                 return match self.state {
-                    AppState::SelectProject => {
-                        self.process_select_project_input(key_event, pool).await
-                    }
-                    AppState::SelectPrompt => {
-                        self.process_select_prompt_input(key_event, pool).await
-                    }
-                    AppState::AskModel => self.process_ask_model_input(key_event, pool).await,
-                    AppState::EditScrolls => self.process_edit_scrolls_input(key_event, pool).await,
+                    AppState::SelectProject => self.process_select_project_input(input_event, pool).await,
+                    AppState::SelectPrompt => self.process_select_prompt_input(input_event, pool).await,
+                    AppState::AskModel => self.process_ask_model_input(input_event, pool).await,
+                    AppState::EditScrolls => self.process_edit_scrolls_input(input_event, pool).await,
+                    AppState::AskModelConfirmation => self.process_confirmation_popup_input(input_event, pool).await,
                 };
             }
         }
@@ -380,10 +608,10 @@ impl Legatio {
 
     async fn process_select_project_input(
         &mut self,
-        key_event: KeyEvent,
+        key_event: InputEvent,
         pool: &SqlitePool,
     ) -> Result<AppState> {
-        match InputEvent::from(key_event) {
+        match key_event {
             InputEvent::Select => {
                 // Fetch all projects
                 let projects = get_projects(pool).await?;
@@ -450,10 +678,10 @@ impl Legatio {
     // Handles user input when selecting a prompt
     async fn process_select_prompt_input(
         &mut self,
-        key_event: KeyEvent,
+        key_event: InputEvent,
         pool: &SqlitePool,
     ) -> Result<AppState> {
-        match InputEvent::from(key_event) {
+        match key_event {
             InputEvent::Select => {
                 if let Some(project) = &self.current_project {
                     let prompts = get_prompts(pool, &project.project_id).await?;
@@ -543,54 +771,16 @@ impl Legatio {
     // Handles user input when asking the model for a response
     async fn process_ask_model_input(
         &mut self,
-        key_event: KeyEvent,
+        key_event: InputEvent,
         pool: &SqlitePool,
     ) -> Result<AppState> {
-        match InputEvent::from(key_event) {
+        match key_event {
             InputEvent::AskModel => {
-                if let Some(project) = &self.current_project {
-                    let scrolls = get_scrolls(pool, &project.project_id).await?;
-                    let mut new_scrolls = Vec::new();
-                    for scroll in scrolls.iter() {
-                        let new_scroll = update_scroll_content(pool, scroll).await?;
-                        new_scrolls.push(new_scroll);
-                    }
-                    let sys_prompt = system_prompt(&new_scrolls).await;
-
-                    let prompts = get_prompts(pool, &project.project_id).await?;
-
-                    let mut chain: Option<Vec<Prompt>> = None;
-                    if let Some(curr_prompt) = &self.current_prompt {
-                        chain = Some(prompt_chain(&prompts, curr_prompt));
-                    }
-
-                    let final_prompt = chain_match_canvas(project).unwrap_or(String::from("."));
-
-                    let question = Question {
-                        system_prompt: if sys_prompt.is_empty() { None } else { Some(sys_prompt) },
-                        messages: chain,
-                        user_input: final_prompt.to_owned(),
-                    };
-
-                    let output = ask_question(self.user_config.as_ref().unwrap(), question).await?;
-
-                    let new_prompt = Prompt::new(
-                        &project.project_id,
-                        &final_prompt,
-                        &output,
-                        &self
-                            .current_prompt
-                            .as_ref()
-                            .map_or(project.project_id.clone(), |p| p.prompt_id.clone()),
-                    );
-
-                    store_prompt(pool, &new_prompt).await?;
-                    self.current_prompt = Some(new_prompt);
-
-                    let mut new_prompts = prompts.clone();
-                    new_prompts.push(self.current_prompt.as_ref().unwrap().clone());
-
-                    chain_into_canvas(project, Some(&new_prompts), self.current_prompt.as_ref())?;
+                if self.user_config.is_some() && self.user_config.as_ref().unwrap().ask_conf {
+                    // Require confirmation for specific models
+                    return Ok(AppState::AskModelConfirmation);
+                } else {
+                    return self.produce_question(pool).await;
                 }
             }
             InputEvent::SwitchBranch => {
@@ -614,10 +804,10 @@ impl Legatio {
     // Handles user input when editing scrolls
     async fn process_edit_scrolls_input(
         &mut self,
-        key_event: KeyEvent,
+        key_event: InputEvent,
         pool: &SqlitePool,
     ) -> Result<AppState> {
-        match InputEvent::from(key_event) {
+        match key_event {
             InputEvent::New => {
                 if let Some(project) = &self.current_project {
                     disable_raw_mode()?;
@@ -676,5 +866,68 @@ impl Legatio {
             _ => {}
         }
         Ok(AppState::EditScrolls)
+    }
+
+    async fn process_confirmation_popup_input(&mut self, key_event: InputEvent, pool: &SqlitePool) -> Result<AppState> {
+        match key_event {
+            InputEvent::Confirm => {
+                // User confirmed the action
+                return self.produce_question(pool).await;
+            }
+            InputEvent::Cancel => {
+                // User cancelled; return to the previous state (e.g., `AskModel`)
+                return Ok(AppState::AskModel);
+            }
+            _ => {}
+        }
+        Ok(AppState::AskModelConfirmation)
+    }
+
+    async fn produce_question(&mut self, pool: &SqlitePool) -> Result<AppState> {
+        if let Some(project) = &self.current_project {
+            let scrolls = get_scrolls(pool, &project.project_id).await?;
+            let mut new_scrolls = Vec::new();
+            for scroll in scrolls.iter() {
+                let new_scroll = update_scroll_content(pool, scroll).await?;
+                new_scrolls.push(new_scroll);
+            }
+            let sys_prompt = system_prompt(&new_scrolls).await;
+
+            let prompts = get_prompts(pool, &project.project_id).await?;
+
+            let mut chain: Option<Vec<Prompt>> = None;
+            if let Some(curr_prompt) = &self.current_prompt {
+                chain = Some(prompt_chain(&prompts, curr_prompt));
+            }
+
+            let final_prompt = chain_match_canvas(project).unwrap_or(String::from("."));
+
+            let question = Question {
+                system_prompt: if sys_prompt.is_empty() { None } else { Some(sys_prompt) },
+                messages: chain,
+                user_input: final_prompt.to_owned(),
+            };
+
+            let output = ask_question(self.user_config.as_ref().unwrap(), question).await?;
+
+            let new_prompt = Prompt::new(
+                &project.project_id,
+                &final_prompt,
+                &output,
+                &self
+                    .current_prompt
+                    .as_ref()
+                    .map_or(project.project_id.clone(), |p| p.prompt_id.clone()),
+            );
+
+            store_prompt(pool, &new_prompt).await?;
+            self.current_prompt = Some(new_prompt);
+
+            let mut new_prompts = prompts.clone();
+            new_prompts.push(self.current_prompt.as_ref().unwrap().clone());
+
+            chain_into_canvas(project, Some(&new_prompts), self.current_prompt.as_ref())?;
+        }
+        Ok(AppState::AskModel)
     }
 }
