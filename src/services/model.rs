@@ -21,8 +21,7 @@ use serde::{Deserialize, Serialize};
 use std::{env, str::FromStr};
 
 use crate::{
-    services::config::UserConfig,
-    utils::{error::AppError, logger::log_error, structs::Prompt},
+    services::config::UserConfig, utils::{error::AppError, logger::{log_error, log_info}, structs::Prompt}
 };
 
 pub struct Question {
@@ -49,7 +48,15 @@ async fn get_ollama_response(question: Question, user_config: &UserConfig) -> Re
     if question.system_prompt.is_some() {
         msgs.push(ChatMessage {
             role: MessageRole::System,
-            content: question.system_prompt.unwrap().to_owned(),
+            content: question.system_prompt.unwrap(),
+            tool_calls: vec![],
+            images: None,
+        });
+    } else {
+        let default_sys_prompt = String::from("You are helpful assistant. Answer the question consicely.");
+        msgs.push(ChatMessage {
+            role: MessageRole::System,
+            content: default_sys_prompt,
             tool_calls: vec![],
             images: None,
         });
@@ -57,34 +64,42 @@ async fn get_ollama_response(question: Question, user_config: &UserConfig) -> Re
 
     if question.messages.is_some() {
         for msg in question.messages.unwrap().iter() {
-            msgs.push(ChatMessage {
-                role: MessageRole::User,
-                content: msg.content.to_owned(),
-                tool_calls: vec![],
-                images: None,
-            });
+            if !msg.content.is_empty() {
+                msgs.push(ChatMessage {
+                    role: MessageRole::User,
+                    content: msg.content.to_owned(),
+                    tool_calls: vec![],
+                    images: None,
+                });
+            }
 
-            msgs.push(ChatMessage {
-                role: MessageRole::Assistant,
-                content: msg.output.to_owned(),
-                tool_calls: vec![],
-                images: None,
-            });
+            if !msg.output.is_empty() {
+                msgs.push(ChatMessage {
+                    role: MessageRole::Assistant,
+                    content: msg.output.to_owned(),
+                    tool_calls: vec![],
+                    images: None,
+                });
+            }
         }
     }
 
-    let usr_input = if question.user_input.is_empty() {
-        String::from(".")
+    if question.user_input.is_empty() {
+        msgs.push(ChatMessage {
+            role: MessageRole::User,
+            content: String::from("."),
+            tool_calls: vec![],
+            images: None,
+        });
     } else {
-        question.user_input.to_owned()
-    };
+        msgs.push(ChatMessage {
+            role: MessageRole::User,
+            content: question.user_input.to_owned(),
+            tool_calls: vec![],
+            images: None,
+        });
+    }
 
-    msgs.push(ChatMessage {
-        role: MessageRole::User,
-        content: usr_input.to_owned(),
-        tool_calls: vec![],
-        images: None,
-    });
 
     // Construct the chat completion request with the system and user messages
     let req = ChatMessageRequest::new(user_config.model.to_owned(), msgs.to_owned());
@@ -134,27 +149,32 @@ async fn get_anthropic_response(question: Question, user_config: &UserConfig) ->
             }
         })
     } else {
-        System::Text(String::from(""))
+        System::Text(String::from("You are helpful assistant. Answer the question consicely."))
     };
 
     // Creating the chain
     let mut msgs = vec![];
     if question.messages.is_some() {
         for msg in question.messages.unwrap().iter() {
-            msgs.push(Message {
-                role: Role::User,
-                content: vec![Content {
-                    content_type: ContentType::Text,
-                    text: msg.content.to_owned(),
-                }],
-            });
-            msgs.push(Message {
-                role: Role::Assistant,
-                content: vec![Content {
-                    content_type: ContentType::Text,
-                    text: msg.output.to_owned(),
-                }],
-            });
+            if !msg.content.is_empty() {
+                msgs.push(Message {
+                    role: Role::User,
+                    content: vec![Content {
+                        content_type: ContentType::Text,
+                        text: msg.content.to_owned(),
+                    }],
+                });
+            }
+
+            if !msg.output.is_empty() {
+                msgs.push(Message {
+                    role: Role::Assistant,
+                    content: vec![Content {
+                        content_type: ContentType::Text,
+                        text: msg.output.to_owned(),
+                    }],
+                });
+            }
         }
     }
 
@@ -218,9 +238,20 @@ async fn get_openai_response(question: Question, user_config: &UserConfig) -> Re
 
     let mut msgs = vec![];
     if question.system_prompt.is_some() {
+        log_info(&format!( "system has prompt: {}", question.system_prompt.clone().unwrap()));
         msgs.push(ChatCompletionMessage {
             role: chat_completion::MessageRole::system,
-            content: chat_completion::Content::Text(question.system_prompt.unwrap()),
+            content: chat_completion::Content::Text(question.system_prompt.unwrap().to_owned()),
+            name: None,
+            tool_calls: None,
+            tool_call_id: None,
+        });
+    } else {
+        let default_sys_prompt = String::from("You are helpful assistant. Answer the question consicely.");
+        log_info("system doesn't have prompt");
+        msgs.push(ChatCompletionMessage {
+            role: chat_completion::MessageRole::system,
+            content: chat_completion::Content::Text(default_sys_prompt),
             name: None,
             tool_calls: None,
             tool_call_id: None,
@@ -229,21 +260,26 @@ async fn get_openai_response(question: Question, user_config: &UserConfig) -> Re
 
     if question.messages.is_some() {
         for msg in question.messages.unwrap().iter() {
-            msgs.push(ChatCompletionMessage {
-                role: chat_completion::MessageRole::user,
-                content: chat_completion::Content::Text(msg.content.to_owned()),
-                name: None,
-                tool_calls: None,
-                tool_call_id: None,
-            });
+            if !msg.content.is_empty() {
+                msgs.push(ChatCompletionMessage {
+                    role: chat_completion::MessageRole::user,
+                    content: chat_completion::Content::Text(msg.content.to_owned()),
+                    name: None,
+                    tool_calls: None,
+                    tool_call_id: None,
+                });
+            }
 
-            msgs.push(ChatCompletionMessage {
-                role: chat_completion::MessageRole::assistant,
-                content: chat_completion::Content::Text(msg.output.to_owned()),
-                name: None,
-                tool_calls: None,
-                tool_call_id: None,
-            });
+            if !msg.output.is_empty() {
+                msgs.push(ChatCompletionMessage {
+                    role: chat_completion::MessageRole::assistant,
+                    content: chat_completion::Content::Text(msg.output.to_owned()),
+                    name: None,
+                    tool_calls: None,
+                    tool_call_id: None,
+                });
+            }
+
         }
     }
 

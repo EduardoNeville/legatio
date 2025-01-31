@@ -567,7 +567,7 @@ impl Legatio {
                     let final_prompt = chain_match_canvas(project).unwrap_or(String::from("."));
 
                     let question = Question {
-                        system_prompt: Some(sys_prompt),
+                        system_prompt: if sys_prompt.is_empty() { None } else { Some(sys_prompt) },
                         messages: chain,
                         user_input: final_prompt.to_owned(),
                     };
