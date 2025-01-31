@@ -10,6 +10,8 @@ mod tests {
     use sqlx::SqlitePool;
 
     async fn create_test_pool() -> SqlitePool {
+        initialize_logger().await;
+
         SqlitePoolOptions::new()
             .connect("sqlite::memory:")
             .await
@@ -112,7 +114,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_delete_project() {
-        let _ = initialize_logger("test.log");
         let pool = create_test_pool().await;
 
         sqlx::query(

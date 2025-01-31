@@ -24,7 +24,7 @@ sqlx = { version = "0.8.1", features = ["runtime-tokio-native-tls", "sqlite"]} #
 # HTTP client
 reqwest = { version = "^0.12.9", default-features = false, features = ["json"] }
 
-# JSON handling
+# TOML handling
 serde = { version = "1.0", features = ["derive"] }
 toml = "0.8.19"
 
@@ -34,6 +34,7 @@ dirs-next = "2.0.0"
 # Error handling
 anyhow = "1.0"
 tempfile = "3.15.0"
+
 # Search
 ignore = "0.4.23"
 nucleo-picker = "0.8.0"
@@ -50,3 +51,6 @@ ollama-rs = "0.2.0"
 ratatui = "0.29.0"
 crossterm = "0.28.1"
 
+# Log
+log = "0.4.25"
+chrono = "0.4.39"

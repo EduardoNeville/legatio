@@ -9,7 +9,7 @@ use anyhow::Result;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    initialize_logger("app.log")?;
+    initialize_logger().await?;
     let pool = get_db_pool().await?;
     let mut app = Legatio::new();
     app.run(&pool).await?;
