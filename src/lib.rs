@@ -28,29 +28,7 @@
 ///
 /// ## Getting Started
 ///
-/// Here is how you can use `Legatio` in your project:
-///
-/// ### Step 1: Initialize the application
-///
-/// ```rust
-/// use legatio::Legatio;
-/// use sqlx::SqlitePool;
-/// use anyhow::Result;
-///
-/// #[tokio::main]
-/// async fn main() -> Result<()> {
-///     // Create a connection pool to SQLite
-///     let pool = SqlitePool::connect("legatio.db").await?;
-///
-///     // Instantiate and run the Legatio application
-///     let mut app = Legatio::new();
-///     app.run(&pool).await?;
-///
-///     Ok(())
-/// }
-/// ```
-///
-/// ### Step 2: Navigating in the Terminal UI
+/// ### Navigating in the Terminal UI
 ///
 /// Once the application launches, use the following keyboard shortcuts to navigate between different operations:
 ///
@@ -82,7 +60,7 @@
 ///   - `[y]`: Confirm an AI query.
 ///   - `[n]`: Cancel an AI query.
 ///
-/// ### Step 3: Project Structure
+/// ### Project Structure
 ///
 /// Each project created in `Legatio` is structured with the following components:
 ///
@@ -96,7 +74,7 @@
 ///
 /// You might also add prompts like "Explain the architectural diagram" or "Summarize the design rationale."
 ///
-/// ### Step 4: Customizing AI Parameters
+/// ### Customizing AI Parameters
 ///
 /// `Legatio` allows fine-grained control over how you interact with AI models:
 ///

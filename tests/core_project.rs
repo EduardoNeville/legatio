@@ -1,9 +1,13 @@
 #[cfg(test)]
 mod tests {
     use legatio::{
-        build_select_project,
-        core::project::{delete_project, get_projects, store_project},
-        format_project_title,
+        core::project::{
+            delete_project,
+            get_projects,
+            store_project,
+            build_select_project,
+            format_project_title
+        },
         utils::{logger::initialize_logger, structs::Project},
     };
     use sqlx::sqlite::SqlitePoolOptions;

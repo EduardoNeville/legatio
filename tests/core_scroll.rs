@@ -6,7 +6,7 @@ mod tests {
         },
         utils::logger::initialize_logger,
         utils::structs::Scroll,
-        AppError,
+        utils::error::AppError,
     };
     use sqlx::sqlite::SqlitePoolOptions;
     use sqlx::SqlitePool;

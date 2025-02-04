@@ -1,8 +1,14 @@
 #[cfg(test)]
 mod tests {
     use legatio::{
-        core::prompt::{delete_prompt, get_prompts, store_prompt, update_prompt},
-        prompt_chain, system_prompt,
+        core::prompt::{
+            delete_prompt,
+            get_prompts,
+            store_prompt,
+            update_prompt,
+            prompt_chain,
+            system_prompt,
+        },
         utils::structs::{Prompt, Scroll},
     };
     use sqlx::sqlite::SqlitePoolOptions;

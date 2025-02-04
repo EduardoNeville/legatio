@@ -1,8 +1,8 @@
-![LegatioLogo](./docs/media/ascii-eagle.png)
-
 # **Legatio: Beginner's Guide to Your Collaborative AI Assistant**
 
 Welcome to **Legatio**, the innovative terminal-based tool for integrating AI into your file management and text editing workflows. This guide will walk you through the setup process, core features, and tutorials for using Legatio with various AI APIs (**OpenAI**, **Anthropic**, and **Ollama**). Each section provides step-by-step instructions for complete beginners.
+
+![LegatioLogo](./docs/media/ascii-eagle.png)
 
 ---
 

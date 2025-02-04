@@ -116,11 +116,6 @@ impl Legatio {
     ///
     /// This initializes the application with a default state (`AppState::SelectProject`) and sets
     /// placeholders for the active project, active prompt, and user configuration.
-    ///
-    /// ### Usage:
-    /// ```rust
-    /// let app = Legatio::new();
-    /// ```
     pub fn new() -> Self {
         Legatio {
             state: AppState::SelectProject,
@@ -143,12 +138,6 @@ impl Legatio {
     ///
     /// ### Returns:
     /// - `Result<()>` indicating success or failure.
-    ///
-    /// ### Example usage:
-    /// ```rust
-    /// let app = Legatio::new();
-    /// app.run(&pool).await?;
-    /// ```
     pub async fn run(&mut self, pool: &SqlitePool) -> Result<()> {
         // Initialize terminal with raw mode
         enable_raw_mode()?;
@@ -190,11 +179,6 @@ impl Legatio {
     ///
     /// ### Returns:
     /// - `Result<()>` indicating success or failure.
-    ///
-    /// ### Example usage:
-    /// ```rust
-    /// app.main_loop(&mut terminal, &pool).await?;
-    /// ```
     async fn main_loop(
         &mut self,
         terminal: &mut Terminal<CrosstermBackend<&mut io::Stdout>>,

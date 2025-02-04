@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <title>**Legatio: Beginner&#39;s Guide to Your Collaborative AI Assistant**</title>
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+    <h1 class="title">**Legatio: Beginner&#39;s Guide to Your Collaborative AI Assistant**</h1>
+    <nav id="rustdoc"><ul>
+<li><a href="#what-does-legatio-do" title="What Does Legatio Do?">0.1 What Does Legatio Do?</a><ul></ul></li>
+<li><a href="#supported-apis" title="Supported APIs">0.2 Supported APIs</a><ul></ul></li>
+<li><a href="#getting-started" title="Getting Started">0.3 Getting Started</a><ul>
+<li><a href="#step-1-install-prerequisites" title="Step 1: Install Prerequisites">0.3.1 Step 1: Install Prerequisites</a><ul></ul></li>
+<li><a href="#step-2-select-an-api" title="Step 2: Select an API">0.3.2 Step 2: Select an API</a><ul></ul></li></ul></li>
+<li><a href="#tutorial-1-using-openai-api" title="Tutorial 1: Using OpenAI API">0.4 Tutorial 1: Using OpenAI API</a><ul>
+<li><a href="#step-1-register-and-obtain-an-api-key" title="Step 1: Register and Obtain an API Key">0.4.1 Step 1: Register and Obtain an API Key</a><ul></ul></li>
+<li><a href="#step-2-export-the-api-key" title="Step 2: Export the API Key">0.4.2 Step 2: Export the API Key</a><ul></ul></li>
+<li><a href="#step-3-edit-configtoml" title="Step 3: Edit `config.toml`">0.4.3 Step 3: Edit <code>config.toml</code></a><ul></ul></li>
+<li><a href="#step-4-interact-with-the-ai" title="Step 4: Interact with the AI">0.4.4 Step 4: Interact with the AI</a><ul></ul></li></ul></li>
+<li><a href="#tutorial-2-using-anthropics-claude-api" title="Tutorial 2: Using Anthropic’s Claude API">0.5 Tutorial 2: Using Anthropic’s Claude API</a><ul>
+<li><a href="#step-1-register-and-obtain-an-api-key-1" title="Step 1: Register and Obtain an API Key">0.5.1 Step 1: Register and Obtain an API Key</a><ul></ul></li>
+<li><a href="#step-2-export-the-api-key-1" title="Step 2: Export the API Key">0.5.2 Step 2: Export the API Key</a><ul></ul></li>
+<li><a href="#step-3-edit-configtoml-1" title="Step 3: Edit `config.toml`">0.5.3 Step 3: Edit <code>config.toml</code></a><ul></ul></li>
+<li><a href="#step-4-use-legatio-with-anthropic" title="Step 4: Use Legatio with Anthropic">0.5.4 Step 4: Use Legatio with Anthropic</a><ul></ul></li></ul></li>
+<li><a href="#tutorial-3-using-ollama-offline-ai" title="Tutorial 3: Using Ollama (Offline AI)">0.6 Tutorial 3: Using Ollama (Offline AI)</a><ul>
+<li><a href="#step-1-install-ollama" title="Step 1: Install Ollama">0.6.1 Step 1: Install Ollama</a><ul></ul></li>
+<li><a href="#step-2-configure-configtoml" title="Step 2: Configure `config.toml`">0.6.2 Step 2: Configure <code>config.toml</code></a><ul></ul></li>
+<li><a href="#step-3-run-legatio" title="Step 3: Run Legatio">0.6.3 Step 3: Run Legatio</a><ul></ul></li>
+<li><a href="#step-4-add-a-prompt-for-ollama" title="Step 4: Add a Prompt for Ollama">0.6.4 Step 4: Add a Prompt for Ollama</a><ul></ul></li></ul></li>
+<li><a href="#managing-scrolls-and-branches" title="Managing Scrolls and Branches">0.7 Managing Scrolls and Branches</a><ul>
+<li><a href="#scrolls" title="Scrolls">0.7.1 Scrolls</a><ul></ul></li></ul></li>
+<li><a href="#branching" title="Branching">0.8 Branching</a><ul></ul></li>
+<li><a href="#cheat-sheet" title="Cheat Sheet">0.9 Cheat Sheet</a><ul></ul></li>
+<li><a href="#troubleshooting" title="Troubleshooting">0.10 Troubleshooting</a><ul></ul></li>
+<li><a href="#feedback" title="Feedback">0.11 Feedback</a><ul></ul></li></ul></nav><p>Welcome to <strong>Legatio</strong>, the innovative terminal-based tool for integrating AI into your file management and text editing workflows. This guide will walk you through the setup process, core features, and tutorials for using Legatio with various AI APIs (<strong>OpenAI</strong>, <strong>Anthropic</strong>, and <strong>Ollama</strong>). Each section provides step-by-step instructions for complete beginners.</p>
+<p><img src="./docs/media/ascii-eagle.png" alt="LegatioLogo" /></p>
+<hr />
+<h2 id="what-does-legatio-do"><a class="doc-anchor" href="#what-does-legatio-do">§</a>0.1 <strong>What Does Legatio Do?</strong></h2>
+<p>Legatio empowers you to:</p>
+<ol>
+<li>Manage <strong>projects</strong> as centralized workspaces.</li>
+<li>Create and chain <strong>prompts</strong> for dynamic AI collaboration.</li>
+<li>Attach and organize <strong>scrolls</strong> (external files) to provide detailed AI context.</li>
+<li>Experiment across <strong>branches</strong> to explore ideas without impacting your main work.</li>
+<li>Work with different AI APIs (OpenAI, Anthropic, Ollama) that align with your needs and goals.</li>
+</ol>
+<hr />
+<h2 id="supported-apis"><a class="doc-anchor" href="#supported-apis">§</a>0.2 <strong>Supported APIs</strong></h2>
+<p>Legatio currently supports the following AI providers:</p>
+<ul>
+<li><strong>OpenAI</strong>: Suitable for versatile and general-purpose AI tasks (e.g., ChatGPT).</li>
+<li><strong>Anthropic</strong>: Known for its Claude AI, useful for ethical and safe AI applications.</li>
+<li><strong>Ollama</strong>: Great for lightweight, offline, or specific AI use cases.</li>
+</ul>
+<p>Each API comes with its own configuration requirements and workflow. Follow the tutorials below to integrate them.</p>
+<hr />
+<h2 id="getting-started"><a class="doc-anchor" href="#getting-started">§</a>0.3 <strong>Getting Started</strong></h2><h3 id="step-1-install-prerequisites"><a class="doc-anchor" href="#step-1-install-prerequisites">§</a>0.3.1 <strong>Step 1: Install Prerequisites</strong></h3>
+<p>Before running Legatio, ensure your system meets these requirements:</p>
+<ol>
+<li>
+<p><strong>Rust Installed</strong>: Install Rust if you haven’t already:</p>
+<div class="example-wrap"><pre class="language-bash"><code>curl --proto &#39;=https&#39; --tlsv1.2 -sSf https://sh.rustup.rs | sh</code></pre></div></li>
+<li>
+<p><strong>Clone the Repository</strong>: Clone the Legatio repository:</p>
+<div class="example-wrap"><pre class="language-bash"><code>git clone &lt;repository-url&gt;
+cd &lt;repository-name&gt;</code></pre></div></li>
+<li>
+<p><strong>Build the Application</strong>:</p>
+<div class="example-wrap"><pre class="language-bash"><code>cargo build --release</code></pre></div></li>
+</ol>
+<hr />
+<h3 id="step-2-select-an-api"><a class="doc-anchor" href="#step-2-select-an-api">§</a>0.3.2 <strong>Step 2: Select an API</strong></h3>
+<p>Legatio supports multiple APIs. Choose one to proceed:</p>
+<div><table><thead><tr><th>API</th><th>Recommended Use Case</th></tr></thead><tbody>
+<tr><td>OpenAI</td><td>General-purpose tasks and ChatGPT integration</td></tr>
+<tr><td>Anthropic</td><td>Advanced ethical AI (Claude)</td></tr>
+<tr><td>Ollama</td><td>Local lightweight AI for offline or specific tasks</td></tr>
+</tbody></table>
+</div>
+<hr />
+<h2 id="tutorial-1-using-openai-api"><a class="doc-anchor" href="#tutorial-1-using-openai-api">§</a>0.4 <strong>Tutorial 1: Using OpenAI API</strong></h2><h3 id="step-1-register-and-obtain-an-api-key"><a class="doc-anchor" href="#step-1-register-and-obtain-an-api-key">§</a>0.4.1 Step 1: Register and Obtain an API Key</h3>
+<ol>
+<li>Visit <a href="https://platform.openai.com/signup">OpenAI</a> and create an account.</li>
+<li>Once logged in, generate your API key from the dashboard.</li>
+</ol>
+<h3 id="step-2-export-the-api-key"><a class="doc-anchor" href="#step-2-export-the-api-key">§</a>0.4.2 Step 2: Export the API Key</h3>
+<p>Run the following command to set the key as an environment variable:</p>
+<div class="example-wrap"><pre class="language-bash"><code>export OPENAI_API_KEY=your_openai_api_key</code></pre></div><h3 id="step-3-edit-configtoml"><a class="doc-anchor" href="#step-3-edit-configtoml">§</a>0.4.3 Step 3: Edit <code>config.toml</code></h3>
+<p>To ensure you’re using OpenAI with Legatio:</p>
+<ol>
+<li>
+<p>Locate your <code>config.toml</code> file (generated in <code>$HOME/.config/legatio/</code>):</p>
+<div class="example-wrap"><pre class="language-toml"><code>[llm]
+llm = &quot;openai&quot;
+model = &quot;gpt-4&quot;  # You could also use gpt-3.5-turbo</code></pre></div></li>
+<li>
+<p>Save and restart Legatio:</p>
+<div class="example-wrap"><pre class="language-bash"><code>cargo run --release</code></pre></div></li>
+</ol>
+<h3 id="step-4-interact-with-the-ai"><a class="doc-anchor" href="#step-4-interact-with-the-ai">§</a>0.4.4 <strong>Step 4: Interact with the AI</strong></h3>
+<ol>
+<li>Create or select a project and add your prompt to <code>legatio.md</code>:<div class="example-wrap"><pre class="language-markdown"><code># ASK MODEL BELOW
+How does renewable energy benefit the environment?</code></pre></div></li>
+<li>Press <code>a</code> in the terminal to send your query and wait for the AI’s response.</li>
+</ol>
+<p><img src="#" alt="Template OpenAI Integration" />
+<em>Alt Text: OpenAI-generated response to a user query in a terminal.</em></p>
+<hr />
+<h2 id="tutorial-2-using-anthropics-claude-api"><a class="doc-anchor" href="#tutorial-2-using-anthropics-claude-api">§</a>0.5 <strong>Tutorial 2: Using Anthropic’s Claude API</strong></h2><h3 id="step-1-register-and-obtain-an-api-key-1"><a class="doc-anchor" href="#step-1-register-and-obtain-an-api-key-1">§</a>0.5.1 Step 1: Register and Obtain an API Key</h3>
+<ol>
+<li>Visit <a href="https://www.anthropic.com/">Anthropic</a> to join their program and access API keys. Make sure to obtain the <code>ANTHROPIC_API_KEY</code>.</li>
+</ol>
+<h3 id="step-2-export-the-api-key-1"><a class="doc-anchor" href="#step-2-export-the-api-key-1">§</a>0.5.2 Step 2: Export the API Key</h3>
+<p>Run the following command to set the key in your environment:</p>
+<div class="example-wrap"><pre class="language-bash"><code>export ANTHROPIC_API_KEY=your_anthropic_api_key</code></pre></div><h3 id="step-3-edit-configtoml-1"><a class="doc-anchor" href="#step-3-edit-configtoml-1">§</a>0.5.3 Step 3: Edit <code>config.toml</code></h3>
+<p>Update your configuration file for Claude:</p>
+<div class="example-wrap"><pre class="language-toml"><code>[llm]
+llm = &quot;anthropic&quot;
+model = &quot;claude-2&quot; # Replace with an available Claude model</code></pre></div><h3 id="step-4-use-legatio-with-anthropic"><a class="doc-anchor" href="#step-4-use-legatio-with-anthropic">§</a>0.5.4 Step 4: Use Legatio with Anthropic</h3>
+<ol>
+<li>Launch Legatio:<div class="example-wrap"><pre class="language-bash"><code>cargo run --release</code></pre></div></li>
+<li>Add a prompt to the <code>legatio.md</code> file inside your project:<div class="example-wrap"><pre class="language-markdown"><code># ASK MODEL BELOW
+What ethical considerations arise in AI-powered decision-making?</code></pre></div></li>
+<li>Press <code>a</code> to send the prompt to Anthropic’s Claude, and results will be appended to <code>legatio.md</code>.</li>
+</ol>
+<p><img src="#" alt="Template Anthropic Integration" />
+<em>Alt Text: Anthropic’s Claude response with ethical considerations in a terminal.</em></p>
+<hr />
+<h2 id="tutorial-3-using-ollama-offline-ai"><a class="doc-anchor" href="#tutorial-3-using-ollama-offline-ai">§</a>0.6 <strong>Tutorial 3: Using Ollama (Offline AI)</strong></h2>
+<p>Ollama is suited for local environments where lightweight or fine-tuned AI is preferred.</p>
+<h3 id="step-1-install-ollama"><a class="doc-anchor" href="#step-1-install-ollama">§</a>0.6.1 Step 1: Install Ollama</h3>
+<ol>
+<li><strong>Install Ollama CLI</strong> based on your platform. For Mac:<div class="example-wrap"><pre class="language-bash"><code>brew install ollama</code></pre></div></li>
+<li>Customize your LLM model (Ollama typically offers offline models).</li>
+</ol>
+<h3 id="step-2-configure-configtoml"><a class="doc-anchor" href="#step-2-configure-configtoml">§</a>0.6.2 Step 2: Configure <code>config.toml</code></h3>
+<p>Set Legatio to use Ollama and specify your local model:</p>
+<div class="example-wrap"><pre class="language-toml"><code>[llm]
+llm = &quot;ollama&quot;
+model = &quot;llama-2&quot; # Replace with your local model name</code></pre></div><h3 id="step-3-run-legatio"><a class="doc-anchor" href="#step-3-run-legatio">§</a>0.6.3 Step 3: Run Legatio</h3>
+<p>Launch the application:</p>
+<div class="example-wrap"><pre class="language-bash"><code>cargo run --release</code></pre></div><h3 id="step-4-add-a-prompt-for-ollama"><a class="doc-anchor" href="#step-4-add-a-prompt-for-ollama">§</a>0.6.4 Step 4: Add a Prompt for Ollama</h3>
+<ol>
+<li>Open your project’s <code>legatio.md</code> file and input:<div class="example-wrap"><pre class="language-markdown"><code># ASK MODEL BELOW
+Provide a brief explanation of machine learning algorithms.</code></pre></div></li>
+<li>Press <code>a</code> to send the question. Ollama will respond and save answers locally.</li>
+</ol>
+<p><img src="#" alt="Template Ollama Integration" />
+<em>Alt Text: Ollama local AI response field displayed inside a terminal workspace.</em></p>
+<hr />
+<h2 id="managing-scrolls-and-branches"><a class="doc-anchor" href="#managing-scrolls-and-branches">§</a>0.7 <strong>Managing Scrolls and Branches</strong></h2><h3 id="scrolls"><a class="doc-anchor" href="#scrolls">§</a>0.7.1 Scrolls</h3>
+<p>Scrolls are project-specific files that add contextual information.</p>
+<ul>
+<li><strong>Add Scrolls</strong>: Use the <code>n</code> key to add required files.</li>
+<li><strong>Remove Scrolls</strong>: Delete them with the <code>d</code> key.</li>
+</ul>
+<hr />
+<h2 id="branching"><a class="doc-anchor" href="#branching">§</a>0.8 <strong>Branching</strong></h2>
+<p>Use Legatio’s branching system to:</p>
+<ul>
+<li>Experiment on side branches.</li>
+<li>Leave the primary branch unaffected.</li>
+</ul>
+<p>To switch branches, press <code>b</code> and follow the on-screen prompts.</p>
+<p><img src="#" alt="Template Branching Workflow" />
+<em>Alt Text: A branching workflow in Legatio where a user can switch between “Experimentation” and “Main Branch”.</em></p>
+<hr />
+<h2 id="cheat-sheet"><a class="doc-anchor" href="#cheat-sheet">§</a>0.9 <strong>Cheat Sheet</strong></h2><div><table><thead><tr><th>Key Combination</th><th>Action</th></tr></thead><tbody>
+<tr><td><code>s</code></td><td>Select a project/prompts</td></tr>
+<tr><td><code>n</code></td><td>Create new project/scroll</td></tr>
+<tr><td><code>d</code></td><td>Delete project/prompt/scroll</td></tr>
+<tr><td><code>e</code></td><td>Edit scrolls</td></tr>
+<tr><td><code>a</code></td><td>Interact with AI through the chosen API</td></tr>
+<tr><td><code>b</code></td><td>Switch project branches</td></tr>
+<tr><td><code>p</code></td><td>Change the project</td></tr>
+<tr><td><code>q</code></td><td>Quit application</td></tr>
+</tbody></table>
+</div>
+<hr />
+<h2 id="troubleshooting"><a class="doc-anchor" href="#troubleshooting">§</a>0.10 <strong>Troubleshooting</strong></h2><div><table><thead><tr><th>Issue</th><th>Resolution</th></tr></thead><tbody>
+<tr><td>Cannot connect to the AI</td><td>Ensure API keys are set (<code>OPENAI_API_KEY</code>, <code>ANTHROPIC_API_KEY</code>).</td></tr>
+<tr><td>API Errors</td><td>Double-check your <code>config.toml</code> is properly configured.</td></tr>
+<tr><td>Failed API Calls in Ollama</td><td>Verify Ollama CLI is installed and the selected model is loaded properly.</td></tr>
+</tbody></table>
+</div>
+<hr />
+<h2 id="feedback"><a class="doc-anchor" href="#feedback">§</a>0.11 <strong>Feedback</strong></h2>
+<p>Your feedback helps improve Legatio! If you find issues, have suggestions, or want to contribute, feel free to open a ticket or make a pull request on the GitHub repository.</p>
+<hr />
+
+    
+</body>
+</html>
