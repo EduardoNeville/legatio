@@ -77,7 +77,50 @@ impl Default for Legatio {
     }
 }
 
+/// The `Legatio` library is a command-line tool designed to facilitate the management and interaction with AI-driven projects.
+/// It provides an interface for managing projects, creating and organizing prompts (instructions for AI models),
+/// handling text-based assets (known as scrolls), and interacting with AI models for output generation.
+/// The tool is particularly aimed at software engineers or anyone who wants to structure workflows involving external AI model interactions.
+///
+/// ## Overview
+/// The main struct in this library is `Legatio`, which acts as the core entry point.
+/// Through `Legatio`, you can perform a wide variety of operations, such as:
+///
+/// - Select and manage projects.
+/// - Manage and edit scrolls and prompts.
+/// - Chain prompts together.
+/// - Ask questions to AI models (like OpenAI's ChatGPT).
+/// - Render a rich terminal user interface (using `ratatui` and `crossterm`).
+/// - Confirm actions to prevent accidental execution of AI queries.
+///
+/// The library relies on an underlying SQLite database (managed via `sqlx`) to persist projects, prompts, and scrolls.
+///
+/// ## Features
+///
+/// - **Keyboard-based navigation:** Navigate through various actions and states using keyboard shortcuts.
+/// - **Project management:** Manage multiple projects with unique scrolls and prompts.
+/// - **Rich UI Rendering:** Leverage `ratatui` for creating visually appealing terminal widgets.
+/// - **AI Support:** Query AI models for generating new outputs or augmenting workflows.
+/// - **Configurable AI Models:** Configure the AI backend (`Framework`) and provide custom parameters like models and tokens.
+///
+/// ## Data Structure
+/// The library organizes its data as follows:
+///
+/// - **Project:** Represents a self-contained entity comprising scrolls and prompts.
+/// - **Scrolls:** Static files or content associated with a project served as context for AI prompts.
+/// - **Prompts:** Instructions to be used in interacting with the AI model.
+/// - **Configuration:** User-level settings, including AI model settings and UI themes.
+///
 impl Legatio {
+    /// Creates a new instance of the `Legatio` application.
+    ///
+    /// This initializes the application with a default state (`AppState::SelectProject`) and sets
+    /// placeholders for the active project, active prompt, and user configuration.
+    ///
+    /// ### Usage:
+    /// ```rust
+    /// let app = Legatio::new();
+    /// ```
     pub fn new() -> Self {
         Legatio {
             state: AppState::SelectProject,
@@ -87,6 +130,25 @@ impl Legatio {
         }
     }
 
+    /// The main entry point for running the `Legatio` application.
+    ///
+    /// This function:
+    /// 1. Sets up a terminal interface with raw mode.
+    /// 2. Initializes the application state.
+    /// 3. Runs a continuous loop (`main_loop`) until the application terminates.
+    /// 4. Ensures raw mode is disabled on exit.
+    ///
+    /// ### Arguments:
+    /// `pool` - A `SqlitePool` connection to the underlying SQLite database.
+    ///
+    /// ### Returns:
+    /// - `Result<()>` indicating success or failure.
+    ///
+    /// ### Example usage:
+    /// ```rust
+    /// let app = Legatio::new();
+    /// app.run(&pool).await?;
+    /// ```
     pub async fn run(&mut self, pool: &SqlitePool) -> Result<()> {
         // Initialize terminal with raw mode
         enable_raw_mode()?;
@@ -115,6 +177,24 @@ impl Legatio {
         result
     }
 
+    /// The primary loop handling all core application functionality and state transitions.
+    ///
+    /// Contains the following key elements:
+    /// 1. **State Management:** Switch between states like project selection, prompt selection, and AI interaction.
+    /// 2. **Rendering:** Dynamically updates terminal UI based on the current state.
+    /// 3. **Input Handling:** Processes user input and react accordingly.
+    ///
+    /// ### Arguments:
+    /// `terminal` - A mutable reference to the `ratatui` terminal instance.
+    /// `pool` - A `SqlitePool` connection to the SQLite database.
+    ///
+    /// ### Returns:
+    /// - `Result<()>` indicating success or failure.
+    ///
+    /// ### Example usage:
+    /// ```rust
+    /// app.main_loop(&mut terminal, &pool).await?;
+    /// ```
     async fn main_loop(
         &mut self,
         terminal: &mut Terminal<CrosstermBackend<&mut io::Stdout>>,
@@ -136,6 +216,20 @@ impl Legatio {
         }
     }
 
+    /// Draws the current state of the application onto the terminal screen.
+    ///
+    /// This method renders different UI elements (project list, scroll details, prompt chains,
+    /// confirmation popups, etc.) depending on the application's state.
+    ///
+    /// ### Arguments:
+    /// `terminal` - The `ratatui` terminal where widgets will be rendered.
+    /// `pool` - The database connection pool to fetch data (if needed).
+    ///
+    /// ### Returns:
+    /// - `Result<()>` on success.
+    ///
+    /// ### Remarks:
+    /// This method is highly state-dependent and processes different inputs in different states.
     async fn draw(
         &self,
         terminal: &mut Terminal<CrosstermBackend<&mut io::Stdout>>,
@@ -596,6 +690,17 @@ impl Legatio {
         }
     }
 
+    /// Handles user input events (like keypresses) based on the application's current state.
+    ///
+    /// ### Input Handling:
+    /// Depending on the current application state (project selection, prompt interaction),
+    /// user inputs are processed accordingly.
+    ///
+    /// ### Arguments:
+    /// `pool` - The database connection pool to interact with stored data.
+    ///
+    /// ### Returns:
+    /// - `Result<AppState>`: Returns the next `AppState` after processing the input.
     async fn handle_input(&mut self, pool: &SqlitePool) -> Result<AppState> {
         if crossterm::event::poll(Duration::from_millis(100))? {
             if let Event::Key(key_event) = event::read()? {
@@ -613,6 +718,20 @@ impl Legatio {
         Ok(self.state)
     }
 
+    /// Processes user input when the application is in the `AppState::SelectProject` state.
+    ///
+    /// In this state, users can:
+    /// - Select an existing project.
+    /// - Create a new project.
+    /// - Delete a project.
+    /// - Exit the application.
+    ///
+    /// ### Arguments:
+    /// `key_event` - The user input event.
+    /// `pool` - The database connection pool.
+    ///
+    /// ### Returns:
+    /// - `Result<AppState>`: Returns the next state of the application.
     async fn process_select_project_input(
         &mut self,
         key_event: InputEvent,
@@ -682,7 +801,21 @@ impl Legatio {
         Ok(AppState::SelectProject)
     }
 
-    // Handles user input when selecting a prompt
+    /// Processes user input in the `AppState::SelectPrompt` state.
+    ///
+    /// In this state, users can:
+    /// - Browse and select prompts.
+    /// - Delete prompts.
+    /// - Edit scrolls.
+    /// - Change the active project.
+    /// - Exit the application.
+    ///
+    /// ### Arguments:
+    /// `key_event` - The user input event.
+    /// `pool` - The database connection pool.
+    ///
+    /// ### Returns:
+    /// - `Result<AppState>`: Returns the next state of the application.
     async fn process_select_prompt_input(
         &mut self,
         key_event: InputEvent,
@@ -778,7 +911,19 @@ impl Legatio {
         Ok(AppState::SelectPrompt)
     }
 
-    // Handles user input when asking the model for a response
+    /// Processes user input in the `AppState::AskModel` state.
+    ///
+    /// In this state, users can:
+    /// - Send the current prompt (and its associated chain) to an AI model for response generation.
+    /// - Navigate back to the `AppState::SelectPrompt` state.
+    /// - Edit scrolls.
+    ///
+    /// ### Arguments:
+    /// `key_event` - The user input event.
+    /// `pool` - The database connection pool.
+    ///
+    /// ### Returns:
+    /// - `Result<AppState>`: Returns the next state of the application.
     async fn process_ask_model_input(
         &mut self,
         key_event: InputEvent,
@@ -811,7 +956,20 @@ impl Legatio {
         Ok(AppState::AskModel)
     }
 
-    // Handles user input when editing scrolls
+    /// Processes user input in the `AppState::EditScrolls` state.
+    ///
+    /// In this state, users can:
+    /// - Add new scrolls to a project.
+    /// - Delete existing scrolls from a project.
+    /// - Navigate back to prompt selection.
+    /// - Change the active project.
+    ///
+    /// ### Arguments:
+    /// `key_event` - The user input event.
+    /// `pool` - The database connection pool.
+    ///
+    /// ### Returns:
+    /// - `Result<AppState>`: Returns the next state of the application.
     async fn process_edit_scrolls_input(
         &mut self,
         key_event: InputEvent,
@@ -878,6 +1036,17 @@ impl Legatio {
         Ok(AppState::EditScrolls)
     }
 
+    /// Processes user input in the `AppState::AskModelConfirmation` state.
+    ///
+    /// In this state, users:
+    /// - Confirm or cancel their intent to query the AI for response generation.
+    ///
+    /// ### Arguments:
+    /// `key_event` - The user input for confirmation or cancellation.
+    /// `pool` - The database connection pool.
+    ///
+    /// ### Returns:
+    /// - `Result<AppState>`: Returns the next state of the application.
     async fn process_confirmation_popup_input(&mut self, key_event: InputEvent, pool: &SqlitePool) -> Result<AppState> {
         match key_event {
             InputEvent::Confirm => {
@@ -893,6 +1062,19 @@ impl Legatio {
         Ok(AppState::AskModelConfirmation)
     }
 
+    /// Generates and sends a new question to the AI model for processing.
+    ///
+    /// This function:
+    /// - Prepares the current prompt chain and associated scrolls.
+    /// - Executes a query to the AI model.
+    /// - Stores the resulting output as a new prompt.
+    /// - Updates the user interface with the latest prompt chain.
+    ///
+    /// ### Arguments:
+    /// `pool` - The database connection pool.
+    ///
+    /// ### Returns:
+    /// - `Result<AppState>`: The next state of the application is determined (usually remains `AppState::AskModel`).
     async fn produce_question(&mut self, pool: &SqlitePool) -> Result<AppState> {
         if let Some(project) = &self.current_project {
             let scrolls = get_scrolls(pool, &project.project_id).await?;
