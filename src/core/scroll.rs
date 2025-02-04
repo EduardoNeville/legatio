@@ -41,7 +41,18 @@ pub async fn get_scrolls(pool: &SqlitePool, project_id: &str) -> Result<Vec<Scro
     .bind(project_id)
     .fetch_all(pool)
     .await
-    .unwrap();
+    .map_err(|err| {
+        log_error(&format!(
+            "Failed to get scrolls for project_id {}. Reason: {}",
+            project_id.to_owned(),
+            err
+        ));
+        AppError::DatabaseError(format!(
+            "Failed to get scrolls for project_id {}. Reason: {}",
+            project_id.to_owned(),
+            err
+        ))
+    })?;
 
     Ok(scrolls_result)
 }

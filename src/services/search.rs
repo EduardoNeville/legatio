@@ -4,7 +4,9 @@ use crossterm::terminal::{disable_raw_mode, enable_raw_mode};
 use ignore::{DirEntry, WalkBuilder, WalkState};
 use nucleo_picker::{nucleo::Config, render::StrRenderer, PickerOptions, Render};
 
-use crate::utils::error::{AppError, Result as AppResult};
+use anyhow::Result;
+
+use crate::utils::{error::AppError, logger::log_error};
 
 pub struct DirEntryRender;
 
@@ -17,7 +19,7 @@ impl Render<DirEntry> for DirEntryRender {
     }
 }
 
-pub fn select_files(dir_path: Option<&str>) -> AppResult<Option<String>> {
+pub fn select_files(dir_path: Option<&str>) -> Result<Option<String>> {
     disable_raw_mode()
         .map_err(|_| AppError::UnexpectedError("Failed to disable raw mode".into()))?;
     let mut picker = PickerOptions::default()
@@ -40,7 +42,7 @@ pub fn select_files(dir_path: Option<&str>) -> AppResult<Option<String>> {
                     Ok(dir) => injector.push(dir),
                     Err(err) => {
                         // Log the error or handle it appropriately
-                        eprintln!("Error during directory walk: {}", err);
+                        log_error(&format!("Error during directory walk: {}", err));
                     }
                 }
                 WalkState::Continue
@@ -57,9 +59,11 @@ pub fn select_files(dir_path: Option<&str>) -> AppResult<Option<String>> {
     Ok(file)
 }
 
-pub fn item_selector(items: Vec<String>) -> AppResult<Option<String>> {
-    disable_raw_mode()
-        .map_err(|_| AppError::UnexpectedError("Failed to disable raw mode".into()))?;
+pub fn item_selector(items: Vec<String>) -> Result<Option<String>> {
+    disable_raw_mode().map_err(|e| {
+        log_error(&format!("Failed to disable raw mode. Reason: {}", e));
+        AppError::UnexpectedError(format!("Failed to disable raw mode. Reason: {}", e))
+    })?;
 
     let mut picker = PickerOptions::default()
         .config(Config::DEFAULT.match_paths())
@@ -72,10 +76,16 @@ pub fn item_selector(items: Vec<String>) -> AppResult<Option<String>> {
 
     let sel_item: Option<String> = picker
         .pick()
-        .map_err(|_| AppError::UnexpectedError("Picker failed to pick an item".into()))?
+        .map_err(|e| {
+            log_error(&format!("Picker failed to pick an item. Reason: {}", e));
+            AppError::UnexpectedError(format!("Picker failed to pick an item. Reason: {}", e))
+        })?
         .map(|opt| opt.to_string());
 
-    enable_raw_mode().map_err(|_| AppError::UnexpectedError("Failed to enable raw mode".into()))?;
+    enable_raw_mode().map_err(|e| {
+        log_error(&format!("Failed to enable raw mode. Reason: {}", e));
+        AppError::UnexpectedError(format!("Failed to enable raw mode. Reason: {}", e))
+    })?;
 
     Ok(sel_item)
 }

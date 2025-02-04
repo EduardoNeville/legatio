@@ -1,15 +1,21 @@
 #[cfg(test)]
 mod tests {
     use legatio::{
-        build_select_project,
-        core::project::{delete_project, get_projects, store_project},
-        format_project_title,
+        core::project::{
+            delete_project,
+            get_projects,
+            store_project,
+            build_select_project,
+            format_project_title
+        },
         utils::{logger::initialize_logger, structs::Project},
     };
     use sqlx::sqlite::SqlitePoolOptions;
     use sqlx::SqlitePool;
 
     async fn create_test_pool() -> SqlitePool {
+        initialize_logger().await;
+
         SqlitePoolOptions::new()
             .connect("sqlite::memory:")
             .await
@@ -112,7 +118,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_delete_project() {
-        let _ = initialize_logger("test.log");
         let pool = create_test_pool().await;
 
         sqlx::query(

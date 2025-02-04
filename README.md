@@ -1,179 +1,229 @@
-# **Legatio: Collaborative AI Text Assistant**
+# **Legatio: Beginner's Guide to Your Collaborative AI Assistant**
 
-Legatio is a feature-rich, extensible, and user-centric tool for collaborative text editing, project branching, and AI-powered assistance. Designed with a focus on productivity and seamless user interaction, Legatio integrates a minimalist UI, project and prompt management, and advanced AI models (like OpenAI's GPT) to help users create, manage, and enhance their projects effectively.
+Welcome to **Legatio**, the innovative terminal-based tool for integrating AI into your file management and text editing workflows. This guide will walk you through the setup process, core features, and tutorials for using Legatio with various AI APIs (**OpenAI**, **Anthropic**, and **Ollama**). Each section provides step-by-step instructions for complete beginners.
 
-This documentation will provide you with a thorough walkthrough of what Legatio does, how to set it up, and how to use its key features, such as managing `.md` files (Markdown), branching projects, and working with files.
+![LegatioLogo](./docs/media/ascii-eagle.png)
 
 ---
 
-## **Features**
+## **What Does Legatio Do?**
 
-- **Project Management**: Organize your workflow using projects that represent isolated tasks, topics, or objectives.
-- **Prompt Storage & Chaining**: Store and chain AI-generated prompts together in an orderly manner.
-- **`.md` File Integration**: Use a `legatio.md` file for keeping track of your session, generating new content, and interacting with the AI.
-- **Branching Mechanism**: Work on different "branches" within the project, enabling isolated pipelines of thought and experimentation.
-- **Scroll Management**: Attach related files (referred to as "scrolls") to a project for context and enrich your AI interactions.
-- **Interactive Terminal UI**: A clean, TUI (Terminal User Interface) experience built with `ratatui`.
+Legatio empowers you to:
+1. Manage **projects** as centralized workspaces.
+2. Create and chain **prompts** for dynamic AI collaboration.
+3. Attach and organize **scrolls** (external files) to provide detailed AI context.
+4. Experiment across **branches** to explore ideas without impacting your main work.
+5. Work with different AI APIs (OpenAI, Anthropic, Ollama) that align with your needs and goals.
+
+---
+
+## **Supported APIs**
+
+Legatio currently supports the following AI providers:
+- **OpenAI**: Suitable for versatile and general-purpose AI tasks (e.g., ChatGPT).
+- **Anthropic**: Known for its Claude AI, useful for ethical and safe AI applications.
+- **Ollama**: Great for lightweight, offline, or specific AI use cases.
+
+Each API comes with its own configuration requirements and workflow. Follow the tutorials below to integrate them.
 
 ---
 
 ## **Getting Started**
 
-### **Prerequisites**
-1. Rust installed on your machine. You can install Rust via Rustup by following the instructions [here](https://www.rust-lang.org/tools/install).
-2. OpenAI API Key. Sign up [here](https://platform.openai.com/signup) if you don't already have an API Key.
-3. An OpenAI-enabled account with permission to use GPT-based models.
+### **Step 1: Install Prerequisites**
 
-### **Setup**
-1. Clone this repository:
+Before running Legatio, ensure your system meets these requirements:
+1. **Rust Installed**: Install Rust if you haven’t already:
+   ```bash
+   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
    ```
+2. **Clone the Repository**: Clone the Legatio repository:
+   ```bash
    git clone <repository-url>
    cd <repository-name>
    ```
 
-2. Install dependencies:
-   ```
+3. **Build the Application**:
+   ```bash
    cargo build --release
    ```
 
-3. Set your OpenAI API Key:
-   ```
-   export OPENAI_API_KEY=your_openai_api_key
-   ```
+---
 
-4. Run the application:
+### **Step 2: Select an API**
+
+Legatio supports multiple APIs. Choose one to proceed:
+
+| API       | Recommended Use Case                                   |
+|-----------|-------------------------------------------------------|
+| OpenAI    | General-purpose tasks and ChatGPT integration         |
+| Anthropic | Advanced ethical AI (Claude)                         |
+| Ollama    | Local lightweight AI for offline or specific tasks    |
+
+---
+
+## **Tutorial 1: Using OpenAI API**
+
+### Step 1: Register and Obtain an API Key
+1. Visit [OpenAI](https://platform.openai.com/signup) and create an account.
+2. Once logged in, generate your API key from the dashboard.
+
+### Step 2: Export the API Key
+Run the following command to set the key as an environment variable:
+```bash
+export OPENAI_API_KEY=your_openai_api_key
+```
+
+### Step 3: Edit `config.toml`
+To ensure you're using OpenAI with Legatio:
+1. Locate your `config.toml` file (generated in `$HOME/.config/legatio/`):
+   ```toml
+   [llm]
+   llm = "openai"
+   model = "gpt-4"  # You could also use gpt-3.5-turbo
    ```
+   
+2. Save and restart Legatio:
+   ```bash
    cargo run --release
    ```
 
----
+### **Step 4: Interact with the AI**
+1. Create or select a project and add your prompt to `legatio.md`:
+   ```markdown
+   # ASK MODEL BELOW
+   How does renewable energy benefit the environment?
+   ```
+2. Press `a` in the terminal to send your query and wait for the AI's response.
 
-## **How to Use**
-
-### **Legatio Workflow**
-1. **Projects as Workspaces**:
-   - A project in Legatio represents a "workspace" where you can manage prompts, integrate scrolls (files), and interact with the AI.
-   - Each project is tied to a directory in your file system.
-
-2. **The `.md` File**:
-   - Every project has a key accompanying file named `legatio.md`, where all AI-generated interactions, prompts, and outputs are logged and stored.
-   - `legatio.md` serves as both a record and a workspace for interacting with the tool.
-
-     **Example Structure of the File**:
-     ```markdown
-     # PROMPT 1
-     Write a summary for the article on climate change.
-     
-     # OUTPUT 1
-     Climate change refers to long-term shifts in temperatures and weather patterns, primarily caused by human activities...
-     
-     # ASK MODEL BELOW
-     Analyze the impact of fossil fuel usage on global average temperatures.
-     ```
-
-   - The content below the `# ASK MODEL BELOW` marker in the file is treated as "new input" for the AI.
-
-3. **Scrolls**:
-   - Scrolls are external files attached to a project that contain useful context or reference material required for completing tasks.
-   - These scrolls are read and processed by the AI while responding to prompts.
-   - Scrolls are managed through the `EditScrolls` mode in the UI.
-
-### **Navigating Legatio's Modes**
-
-Legatio follows a structured pipeline wherein a user moves between different **states**. Below is an explanation of the key states and how to interact with them:
-
-#### 1. **Project Management**
-
-- **[s] Select Project**: Select an existing project or directory to work on.
-- **[n] New Project**: Create a new project directly in the UI. You'll be asked to provide a directory.
-- **[d] Delete Project**: Permanently remove a project from the system.
-- **[q] Quit**: Exit the application.
-
-#### 2. **Prompt Management**
-
-- **[b] Select Prompt**: Choose an existing prompt within the project to continue working with the AI.
-- **[d] Delete Prompt**: Remove a specific prompt from the project.
-- **[e] Edit Scrolls**: Manage scrolls associated with the project.
-- **[p] Change Project**: Switch to a different project.
-- **[q] Quit**: Exit the application.
-
-#### 3. **Asking the AI**
-
-- **[a] Ask the Model**: Enter your query for the model to generate a response.
-- **[b] Switch Branch**: Navigate or move between branches.
-- **[e] Edit Scrolls**: Add, edit, or remove scrolls.
-- **[p] Change Project**: Alternate between projects.
-- **[q] Quit**: Exit.
-
-#### 4. **Scroll Management**
-
-- **[n] New Scroll**: Attach new files to the project directory as scrolls.
-- **[d] Delete Scroll**: Remove an associated scroll from the project.
-- **[a] Ask Model**: Access the AI interaction with the project's context.
-- **[s] Switch Branch**: Return to the main branch of the project.
-- **[p] Change Project**: Exit to a different project.
-- **[q] Quit**: Exit the application.
+![Template OpenAI Integration](#)
+*Alt Text: OpenAI-generated response to a user query in a terminal.*
 
 ---
 
-### **Branching in Legatio**
-Branching is a powerful feature of Legatio that allows you to:
-1. Create isolated versions of a project where you try out different ideas without affecting the parent branch.
-2. Experiment with specific chains of prompts while maintaining the main project structure.
+## **Tutorial 2: Using Anthropic's Claude API**
 
-#### How It Works
-- Branching allows you to switch to a specific segment of your ongoing project.
-- You can view, modify, and chain your prompts differently for each branch.
+### Step 1: Register and Obtain an API Key
+1. Visit [Anthropic](https://www.anthropic.com/) to join their program and access API keys. Make sure to obtain the `ANTHROPIC_API_KEY`.
 
-#### Real-World Example
-- **Branch A**: Generates a concise executive summary.
-- **Branch B**: Creates a long-form, in-depth analysis.
+### Step 2: Export the API Key
+Run the following command to set the key in your environment:
+```bash
+export ANTHROPIC_API_KEY=your_anthropic_api_key
+```
 
-Switching branches dynamically pulls all relevant project context (prompts, scrolls, etc.) into the workspace.
+### Step 3: Edit `config.toml`
+Update your configuration file for Claude:
+```toml
+[llm]
+llm = "anthropic"
+model = "claude-2" # Replace with an available Claude model
+```
 
----
+### Step 4: Use Legatio with Anthropic
+1. Launch Legatio:
+   ```bash
+   cargo run --release
+   ```
+2. Add a prompt to the `legatio.md` file inside your project:
+   ```markdown
+   # ASK MODEL BELOW
+   What ethical considerations arise in AI-powered decision-making?
+   ```
+3. Press `a` to send the prompt to Anthropic's Claude, and results will be appended to `legatio.md`.
 
-### **AI Workflow**
-Here's how prompts work with Legatio and the AI:
-1. System Prompts:
-   - Scrolls are processed into a **system prompt**, offering background information to the AI.
-
-2. Input Prompts:
-   - User-defined inputs (or prompts) are used to query the model.
-
-3. Prompt Chaining:
-   - Legatio supports chaining prompts together, allowing context from previous prompts to be fed into new queries.
-
-4. Output Storage:
-   - AI responses are stored alongside their associated prompts in the `legatio.md` file.
-
----
-
-### **Shortcuts Table**
-| Shortcut       | Action                          |
-|----------------|---------------------------------|
-| `s`            | Select Project                 |
-| `n`            | Create New Project/Scroll      |
-| `d`            | Delete Project/Prompt/Scroll   |
-| `e`            | Edit Scrolls                  |
-| `a`            | Ask AI Model                   |
-| `b`            | Switch Branch                  |
-| `p`            | Change Project                 |
-| `q`            | Quit the Application           |
+![Template Anthropic Integration](#)
+*Alt Text: Anthropic's Claude response with ethical considerations in a terminal.*
 
 ---
 
-## **Best Practices**
+## **Tutorial 3: Using Ollama (Offline AI)**
 
-1. **Divide and Conquer**:
-   Use branching to divide large tasks into manageable sub-segments.
+Ollama is suited for local environments where lightweight or fine-tuned AI is preferred.
 
-2. **Organize with Scrolls**:
-   Attach relevant documentation, context files, or external research to projects for more effective AI responses.
+### Step 1: Install Ollama
+1. **Install Ollama CLI** based on your platform. For Mac:
+   ```bash
+   brew install ollama
+   ```
+2. Customize your LLM model (Ollama typically offers offline models).
 
-3. **Utilize Chains**:
-   When working on a project with multiple prompts, use chaining to maintain coherency in output.
+### Step 2: Configure `config.toml`
+Set Legatio to use Ollama and specify your local model:
+```toml
+[llm]
+llm = "ollama"
+model = "llama-2" # Replace with your local model name
+```
 
-4. **Maintain the `.md` File**:
-   The `legatio.md` is your source of truth for all interactions in a specific project; review it periodically for clarity and structure.
+### Step 3: Run Legatio
+Launch the application:
+```bash
+cargo run --release
+```
 
+### Step 4: Add a Prompt for Ollama
+1. Open your project's `legatio.md` file and input:
+   ```markdown
+   # ASK MODEL BELOW
+   Provide a brief explanation of machine learning algorithms.
+   ```
+2. Press `a` to send the question. Ollama will respond and save answers locally.
+
+![Template Ollama Integration](#)
+*Alt Text: Ollama local AI response field displayed inside a terminal workspace.*
+
+---
+
+## **Managing Scrolls and Branches**
+
+### Scrolls
+Scrolls are project-specific files that add contextual information.
+- **Add Scrolls**: Use the `n` key to add required files.
+- **Remove Scrolls**: Delete them with the `d` key.
+
+---
+
+## **Branching**
+
+Use Legatio's branching system to:
+- Experiment on side branches.
+- Leave the primary branch unaffected.
+
+To switch branches, press `b` and follow the on-screen prompts.
+
+![Template Branching Workflow](#)
+*Alt Text: A branching workflow in Legatio where a user can switch between "Experimentation" and "Main Branch".*
+
+---
+
+## **Cheat Sheet**
+
+| Key Combination | Action                                      |
+|------------------|--------------------------------------------|
+| `s`              | Select a project/prompts                  |
+| `n`              | Create new project/scroll                 |
+| `d`              | Delete project/prompt/scroll              |
+| `e`              | Edit scrolls                              |
+| `a`              | Interact with AI through the chosen API   |
+| `b`              | Switch project branches                   |
+| `p`              | Change the project                        |
+| `q`              | Quit application                          |
+
+---
+
+## **Troubleshooting**
+
+| Issue                        | Resolution                                                                 |
+|------------------------------|---------------------------------------------------------------------------|
+| Cannot connect to the AI     | Ensure API keys are set (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`).           |
+| API Errors                   | Double-check your `config.toml` is properly configured.                  |
+| Failed API Calls in Ollama   | Verify Ollama CLI is installed and the selected model is loaded properly. |
+
+---
+
+## **Feedback**
+
+Your feedback helps improve Legatio! If you find issues, have suggestions, or want to contribute, feel free to open a ticket or make a pull request on the GitHub repository.
+
+---

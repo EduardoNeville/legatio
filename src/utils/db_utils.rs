@@ -1,10 +1,21 @@
-use crate::utils::logger::{log_error, log_info};
+use crate::{
+    services::config::get_config_dir,
+    utils::logger::{log_error, log_info},
+};
 use anyhow::Result;
 use sqlx::{migrate::MigrateDatabase, sqlite::SqlitePool, Sqlite};
 
 use super::error::AppError;
 
-pub async fn get_db_pool(db_url: &str) -> Result<SqlitePool, AppError> {
+/// Get the path of the database file inside the Legatio directory.
+fn get_db_path() -> Result<String> {
+    let config_dir = get_config_dir()?;
+    let db_url = format!("sqlite://{}/legatio.db", config_dir.to_string_lossy());
+    Ok(db_url)
+}
+
+pub async fn get_db_pool() -> Result<SqlitePool, AppError> {
+    let db_url = &get_db_path().unwrap();
     // Check if database exists, if not, create it
     if !Sqlite::database_exists(db_url).await.unwrap_or(false) {
         match Sqlite::create_database(db_url).await {

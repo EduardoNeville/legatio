@@ -1,6 +1,6 @@
 [package]
 name = "legatio"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2021"
 
 [lib]
@@ -15,6 +15,7 @@ debug = false
 
 [dependencies]
 
+
 # Async runtime
 tokio = { version = "1.20.0", features = ["macros"]} # "full"
 
@@ -24,17 +25,16 @@ sqlx = { version = "0.8.1", features = ["runtime-tokio-native-tls", "sqlite"]} #
 # HTTP client
 reqwest = { version = "^0.12.9", default-features = false, features = ["json"] }
 
-# JSON handling
+# TOML handling
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+toml = "0.8.19"
+
+# Config
+dirs-next = "2.0.0"
 
 # Error handling
 anyhow = "1.0"
-thiserror = "2.0.11"
-
-# Testing
 tempfile = "3.15.0"
-
 
 # Search
 ignore = "0.4.23"
@@ -43,12 +43,13 @@ nucleo-picker = "0.8.0"
 # uuid
 uuid = { version = "1.11.0", features = ["v4"] }
 
-futures = "0.3.31"
-
 # Models
-openai-api-rs = "5.2.4"
+ask_ai = "0.1.1"
 
 # Ui
 ratatui = "0.29.0"
 crossterm = "0.28.1"
 
+# Log
+log = "0.4.25"
+chrono = "0.4.39"

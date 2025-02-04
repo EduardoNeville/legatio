@@ -34,15 +34,13 @@ pub async fn store_project(pool: &SqlitePool, project: &Project) -> Result<()> {
 pub async fn get_projects(pool: &SqlitePool) -> Result<Vec<Project>> {
     let result = sqlx::query_as::<_, Project>("SELECT * FROM projects;")
         .fetch_all(pool)
-        .await;
+        .await
+        .map_err(|err| {
+            log_error(&format!("Failed to get projects. Reason: {}", err));
+            AppError::DatabaseError(format!("Failed to get projects. Reason: {}", err))
+        })?;
 
-    match result {
-        Ok(projects) => Ok(projects),
-        Err(error) => {
-            log_error(&format!("Failed to fetch projects: {}", error));
-            Err(error.into())
-        }
-    }
+    Ok(result)
 }
 
 pub async fn delete_project(pool: &SqlitePool, project_id: &str) -> Result<()> {

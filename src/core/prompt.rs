@@ -40,7 +40,7 @@ pub async fn store_prompt(pool: &SqlitePool, prompt: &Prompt) -> Result<()> {
 
 // Sorted from first to last prompt on the list
 pub async fn get_prompts(pool: &SqlitePool, project_id: &str) -> Result<Vec<Prompt>> {
-    let prompts: Vec<Prompt> = sqlx::query_as::<_, Prompt>(
+    let prompts = sqlx::query_as::<_, Prompt>(
         "SELECT * 
         FROM prompts
         WHERE project_id = $1;",
@@ -48,7 +48,18 @@ pub async fn get_prompts(pool: &SqlitePool, project_id: &str) -> Result<Vec<Prom
     .bind(project_id)
     .fetch_all(pool)
     .await
-    .unwrap();
+    .map_err(|err| {
+        log_error(&format!(
+            "Failed to get prompts for project_id {}. Reason: {}",
+            project_id.to_owned(),
+            err
+        ));
+        AppError::DatabaseError(format!(
+            "Failed to get prompts for project_id {}. Reason: {}",
+            project_id.to_owned(),
+            err
+        ))
+    })?;
 
     Ok(prompts)
 }
@@ -151,20 +162,12 @@ pub fn prompt_chain(prompts: &[Prompt], prompt: &Prompt) -> Vec<Prompt> {
 pub fn format_prompt(p: &Prompt) -> (String, String) {
     let p_str = format!(
         " |- Prompt: {}",
-        if p.content.chars().count() < 40 {
-            p.content.replace('\n', " ").to_string()
-        } else {
-            p.content[0..40].replace('\n', " ").to_string()
-        },
+        p.content.replace('\n', " ").to_string()
     );
 
     let o_str = format!(
         " |  Output: {}",
-        if p.output.chars().count() < 40 {
-            p.output.replace('\n', " ").to_string()
-        } else {
-            p.output[0..40].replace('\n', " ").to_string()
-        }
+        p.output.replace('\n', " ").to_string()
     );
 
     (p_str, o_str)
@@ -173,20 +176,12 @@ pub fn format_prompt(p: &Prompt) -> (String, String) {
 pub fn format_prompt_depth(p: &Prompt, b_depth: &str) -> (String, String) {
     let p_str = format!(
         "{b_depth}> Prompt: {}",
-        if p.content.chars().count() < 40 {
-            p.content.replace('\n', " ").to_string()
-        } else {
-            p.content[0..40].replace('\n', " ").to_string()
-        },
+        p.content.replace('\n', " ").to_string()
     );
 
     let o_str = format!(
         "{b_depth}> Output: {}",
-        if p.output.chars().count() < 40 {
-            p.output.replace('\n', " ").to_string()
-        } else {
-            p.output[0..40].replace('\n', " ").to_string()
-        }
+        p.output.replace('\n', " ").to_string()
     );
 
     (p_str, o_str)

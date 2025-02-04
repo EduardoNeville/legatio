@@ -6,7 +6,7 @@ mod tests {
         },
         utils::logger::initialize_logger,
         utils::structs::Scroll,
-        AppError,
+        utils::error::AppError,
     };
     use sqlx::sqlite::SqlitePoolOptions;
     use sqlx::SqlitePool;
@@ -14,16 +14,18 @@ mod tests {
 
     // Utility function to create an in-memory SQLite pool for testing
     async fn create_test_pool() -> SqlitePool {
+        initialize_logger().await;
+
         SqlitePoolOptions::new()
             .connect("sqlite::memory:")
             .await
             .expect("Failed to create database connection pool")
+
     }
 
     #[tokio::test]
     async fn test_store_scroll_success() {
         let pool = create_test_pool().await;
-        initialize_logger("test.log");
 
         sqlx::query(
             "CREATE TABLE scrolls (
@@ -61,7 +63,6 @@ mod tests {
     #[tokio::test]
     async fn test_store_scroll_duplicate() {
         let pool = create_test_pool().await;
-        initialize_logger("test.log");
 
         sqlx::query(
             "CREATE TABLE scrolls (
