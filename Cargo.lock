@@ -68,6 +68,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "34ac096ce696dc2fcabef30516bb13c0a68a11d30131d3df6f04711467681b04"
 
 [[package]]
+name = "ask_ai"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dd3fed25ce59de8a70644fe2a883a24d09207283d2c42fe09fc51763e89042ae"
+dependencies = [
+ "anthropic-rs",
+ "anyhow",
+ "ollama-rs",
+ "openai-api-rs",
+ "serde",
+ "tokio",
+]
+
+[[package]]
 name = "async-stream"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1182,16 +1196,14 @@ dependencies = [
 name = "legatio"
 version = "0.1.4"
 dependencies = [
- "anthropic-rs",
  "anyhow",
+ "ask_ai",
  "chrono",
  "crossterm",
  "dirs-next",
  "ignore",
  "log",
  "nucleo-picker",
- "ollama-rs",
- "openai-api-rs",
  "ratatui",
  "reqwest",
  "serde",

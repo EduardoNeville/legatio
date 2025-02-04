@@ -15,6 +15,7 @@ debug = false
 
 [dependencies]
 
+
 # Async runtime
 tokio = { version = "1.20.0", features = ["macros"]} # "full"
 
@@ -43,9 +44,7 @@ nucleo-picker = "0.8.0"
 uuid = { version = "1.11.0", features = ["v4"] }
 
 # Models
-openai-api-rs = "5.2.4"
-anthropic-rs = "0.1.7"
-ollama-rs = "0.2.0"
+ask_ai = "0.1.1"
 
 # Ui
 ratatui = "0.29.0"

@@ -26,11 +26,16 @@ use crate::{
     },
     services::{
         config::{read_config, store_config, UserConfig},
-        model::{ask_question, Question, LLM},
+        //model::{ask_question, Question, LLM},
         search::{item_selector, select_files},
         ui::{extract_theme_colors, usr_prompt_chain, usr_prompts, usr_scrolls},
     },
     utils::structs::{Project, Prompt},
+};
+
+
+use ask_ai::{
+    config::{AiConfig, AiPrompt, Question, Framework}, ask_ai::ask_question
 };
 use anyhow::Result;
 use sqlx::SqlitePool;
@@ -91,10 +96,12 @@ impl Legatio {
 
         // Default config for user
         let default_config = UserConfig {
-            llm: LLM::OpenAI,
-            model: String::from("chatgpt-4o-latest"),
+            ai_conf: AiConfig {
+                llm: Framework::OpenAI,
+                model: String::from("chatgpt-4o-latest"),
+                max_token: None,
+            },
             theme: String::from("Tokyo Storm"),
-            max_token: None,
             ask_conf: true,
         };
         self.user_config = Some(read_config().unwrap_or(default_config));
@@ -721,6 +728,9 @@ impl Legatio {
                             enable_raw_mode()?;
                             return Ok(AppState::SelectPrompt);
                         }
+                    } else {
+                        // No prompts so only place holder
+                        chain_into_canvas(project, None, None)?;
                     }
                     return Ok(AppState::AskModel);
                 }
@@ -902,13 +912,22 @@ impl Legatio {
 
             let final_prompt = chain_match_canvas(project).unwrap_or(String::from("."));
 
-            let question = Question {
-                system_prompt: if sys_prompt.is_empty() { None } else { Some(sys_prompt) },
-                messages: chain,
-                user_input: final_prompt.to_owned(),
+            let prompt_chain: Option<Vec<AiPrompt>> = match chain {
+                Some(prompts) => {
+                    Some(prompts.iter().map(|p| 
+                        AiPrompt {content: p.content.to_owned(), output: p.output.to_owned()}
+                    ).collect())
+                },
+                None => None,
             };
 
-            let output = ask_question(self.user_config.as_ref().unwrap(), question).await?;
+            let question = Question {
+                system_prompt: if sys_prompt.is_empty() { None } else { Some(sys_prompt) },
+                messages: prompt_chain,
+                new_prompt: final_prompt.to_owned(),
+            };
+
+            let output = ask_question(&self.user_config.as_ref().unwrap().ai_conf, question).await?;
 
             let new_prompt = Prompt::new(
                 &project.project_id,

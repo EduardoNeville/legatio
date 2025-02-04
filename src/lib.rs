@@ -13,6 +13,6 @@ pub use crate::utils::logger::*;
 pub use crate::utils::structs::*;
 
 pub use crate::services::legatio::*;
-pub use crate::services::model::*;
+//pub use crate::services::model::*;
 pub use crate::services::search::*;
 pub use crate::services::ui::*;

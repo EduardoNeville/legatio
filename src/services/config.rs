@@ -1,3 +1,4 @@
+use ask_ai::config::AiConfig;
 use anyhow::Result;
 use dirs_next::config_dir;
 use serde::Deserialize;
@@ -8,16 +9,13 @@ use std::io::Write;
 use std::path::PathBuf;
 
 use crate::{
-    services::model::LLM,
     utils::{error::AppError, logger::log_error},
 };
 
 #[derive(Debug, Deserialize, Serialize)] // Add Serialize to support serialization
 pub struct UserConfig {
-    pub llm: LLM,
-    pub model: String,
+    pub ai_conf: AiConfig,
     pub theme: String,
-    pub max_token: Option<u32>,
     pub ask_conf: bool,
 }
 
