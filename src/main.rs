@@ -1,4 +1,4 @@
-use services::legatio::Legatio;
+use services::{config::check_config_files, legatio::Legatio};
 use utils::{db_utils::get_db_pool, logger::initialize_logger};
 
 mod core;
@@ -10,7 +10,7 @@ use anyhow::Result;
 /// # Legatio: An AI-Powered Workflow Management Tool
 ///
 /// `Legatio` is a terminal-based framework for managing and interacting with AI workflows. It allows users
-/// to organize and structure projects, prompts, and text-based assets (scrolls) while providing mechanisms 
+/// to organize and structure projects, prompts, and text-based assets (scrolls) while providing mechanisms
 /// to interact with AI models for responding to questions or deriving insights.
 ///
 /// This crate is specifically designed for developers, data scientists, or any other professionals who:
@@ -126,7 +126,7 @@ use anyhow::Result;
 ///
 /// ## Contributing
 ///
-/// Contributions, bug reports, and feature requests are welcome! 
+/// Contributions, bug reports, and feature requests are welcome!
 /// Please open an issue or submit a pull request on the [GitHub repository](https://github.com/your-username/legatio).
 ///
 /// ## License
@@ -140,6 +140,7 @@ use anyhow::Result;
 #[tokio::main]
 async fn main() -> Result<()> {
     initialize_logger().await?;
+    check_config_files()?;
     let pool = get_db_pool().await?;
     let mut app = Legatio::new();
     app.run(&pool).await?;

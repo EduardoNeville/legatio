@@ -1,12 +1,12 @@
 #[cfg(test)]
 mod tests {
+    use legatio::services::config::*;
+    use legatio::utils::logger::*;
     use std::fs::{self, File};
     use std::io::{BufRead, BufReader};
+    use std::path::PathBuf;
     use std::thread;
     use std::time::Duration;
-    use legatio::utils::logger::*;
-    use legatio::services::config::*;
-    use std::path::PathBuf;
 
     use anyhow::Result;
 
@@ -44,9 +44,18 @@ mod tests {
         }
 
         // Validate that log entries exist.
-        assert!(lines.iter().any(|line| line.contains("INFO") && line.contains("This is an info log for testing.")));
-        assert!(lines.iter().any(|line| line.contains("ERROR") && line.contains("This is an error log for testing.")));
-        assert!(lines.iter().any(|line| line.contains("WARN") && line.contains("This is a warning log for testing.")));
+        assert!(
+            lines
+                .iter()
+                .any(|line| line.contains("INFO")
+                    && line.contains("This is an info log for testing."))
+        );
+        assert!(lines.iter().any(
+            |line| line.contains("ERROR") && line.contains("This is an error log for testing.")
+        ));
+        assert!(lines.iter().any(
+            |line| line.contains("WARN") && line.contains("This is a warning log for testing.")
+        ));
 
         Ok(())
     }
@@ -63,7 +72,11 @@ mod tests {
             entry
                 .metadata()
                 .and_then(|meta| meta.modified())
-                .map(|mtime| std::time::SystemTime::now().duration_since(mtime).unwrap_or_default())
+                .map(|mtime| {
+                    std::time::SystemTime::now()
+                        .duration_since(mtime)
+                        .unwrap_or_default()
+                })
                 .ok()
         });
 

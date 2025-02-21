@@ -1,0 +1,216 @@
+[[themes]]
+name = "Bashtop Adapta"
+background = "#"
+primary = "#cfd8dc"
+secondary = "#ff"
+accent = "#90"
+
+[[themes]]
+name = "Bashtop Adwaita"
+background = "#f6f5f4"
+primary = "#2e3436"
+secondary = "#2e3436"
+accent = "#1a5fb4"
+
+[[themes]]
+name = "Default"
+background = "#0B0E14"
+primary = "#BFBDB6"
+secondary = "#BFBDB6"
+accent = "#E6B450"
+
+[[themes]]
+name = "Dracula"
+background = "#282a36"
+primary = "#f8f8f2"
+secondary = "#f8f8f2"
+accent = "#6272a4"
+
+[[themes]]
+name = "Blues and Oranges"
+background = "#04142E"
+primary = "#99DFFF"
+secondary = "#99FFFF"
+accent = "#FF7F00"
+
+[[themes]]
+name = "Elementarish"
+background = "#333333"
+primary = "#eee8d5"
+secondary = "#eee8d5"
+accent = "#d1302c"
+
+[[themes]]
+name = "Everblush"
+background = "#272e33"
+primary = "#d3c6aa"
+secondary = "#d3c6aa"
+accent = "#e67e80"
+
+[[themes]]
+name = "Everforest"
+background = "#2d353b"
+primary = "#d3c6aa"
+secondary = "#d3c6aa"
+accent = "#e67e80"
+
+[[themes]]
+name = "Flat Remixed"
+background = "#e4e4e7"
+primary = "#737680"
+secondary = "#272a34"
+accent = "#90"
+
+[[themes]]
+name = "Flat Remixed Dark"
+background = "#"
+primary = "#E6E6E6"
+secondary = "#ff"
+accent = "#90"
+
+[[themes]]
+name = "Grayscale"
+background = "#00"
+primary = "#bb"
+secondary = "#cc"
+accent = "#90"
+
+[[themes]]
+name = "Gruvbox"
+background = "#1d2021"
+primary = "#a89984"
+secondary = "#ebdbb2"
+accent = "#d79921"
+
+[[themes]]
+name = "Gruvbox Modified"
+background = "#282828"
+primary = "#EBDBB2"
+secondary = "#EBDBB2"
+accent = "#CC241D"
+
+[[themes]]
+name = "Gruvbox Light"
+background = "#fbf1c7"
+primary = "#3c3836"
+secondary = "#3c3836"
+accent = "#cc241d"
+
+[[themes]]
+name = "Gruvbox Material Dark"
+background = "#282828"
+primary = "#d4be98"
+secondary = "#d4be98"
+accent = "#ea6962"
+
+[[themes]]
+name = "Hardcore Night"
+background = "#1C1E26"
+primary = "#f8f8f2"
+secondary = "#f8f8f2"
+accent = "#B877DB"
+
+[[themes]]
+name = "HotPurpleTrafficLight"
+background = "#000000"
+primary = "#d1d1e0"
+secondary = "#d1d1e0"
+accent = "#9933ff"
+
+[[themes]]
+name = "Kyli0x"
+background = "#222222"
+primary = "#e8f6f5"
+secondary = "#e8f6f5"
+accent = "#21d6c9"
+
+[[themes]]
+name = "Matcha-Dark-Sea"
+background = "#"
+primary = "#F8F8F2"
+secondary = "#F8F8F2"
+accent = "#2eb398"
+
+[[themes]]
+name = "Monokai"
+background = "#060604"
+primary = "#F8F8F2"
+secondary = "#F8F8F2"
+accent = "#F92672"
+
+[[themes]]
+name = "Night Owl"
+background = "#011627"
+primary = "#d6deeb"
+secondary = "#ffffff"
+accent = "#addb67"
+
+[[themes]]
+name = "Nord"
+background = "#2E3440"
+primary = "#D8DEE9"
+secondary = "#8FBCBB"
+accent = "#5E81AC"
+
+[[themes]]
+name = "OneDark"
+background = "#282c34"
+primary = "#abb2bf"
+secondary = "#abb2bf"
+accent = "#61afef"
+
+[[themes]]
+name = "Paper"
+background = "#F2EEDE"
+primary = "#00"
+secondary = "#00"
+accent = "#CC3E28"
+
+[[themes]]
+name = "Phoenix Night"
+background = "#1a1b26"
+primary = "#cfc9c2"
+secondary = "#cfc9c2"
+accent = "#7dcfff"
+
+[[themes]]
+name = "Solarized"
+background = "#002b36"
+primary = "#eee8d5"
+secondary = "#fdf6e3"
+accent = "#b58900"
+
+[[themes]]
+name = "Solarized Light"
+background = "#fdf6e3"
+primary = "#586e75"
+secondary = "#002b36"
+accent = "#b58900"
+
+[[themes]]
+name = "Tokyo Night"
+background = "#1a1b26"
+primary = "#cfc9c2"
+secondary = "#cfc9c2"
+accent = "#7dcfff"
+
+[[themes]]
+name = "Tokyo Storm"
+background = "#24283b"
+primary = "#cfc9c2"
+secondary = "#cfc9c2"
+accent = "#7dcfff"
+
+[[themes]]
+name = "Tomorrow Night"
+background = "#1d1f21"
+primary = "#c5c8c6"
+secondary = "#c5c8c6"
+accent = "#81beb7"
+
+[[themes]]
+name = "Whiteout"
+background = "#ff"
+primary = "#30"
+secondary = "#10"
+accent = "#284d75"

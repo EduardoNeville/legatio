@@ -38,12 +38,7 @@ impl Log for FileLogger {
         if self.enabled(record.metadata()) {
             // Format the log message with a timestamp.
             let timestamp = Local::now().format("%Y-%m-%d %H:%M:%S");
-            let log_message = format!(
-                "[{}] [{}] {}\n",
-                timestamp,
-                record.level(),
-                record.args()
-            );
+            let log_message = format!("[{}] [{}] {}\n", timestamp, record.level(), record.args());
 
             // Write the message to the log file.
             if let Ok(mut file) = self.log_file.lock() {

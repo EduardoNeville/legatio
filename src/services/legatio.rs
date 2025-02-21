@@ -33,11 +33,11 @@ use crate::{
     utils::structs::{Project, Prompt},
 };
 
-
-use ask_ai::{
-    config::{AiConfig, AiPrompt, Question, Framework}, ask_ai::ask_question
-};
 use anyhow::Result;
+use ask_ai::{
+    ask_ai::ask_question,
+    config::{AiConfig, AiPrompt, Framework, Question},
+};
 use sqlx::SqlitePool;
 
 pub struct Legatio {
@@ -155,6 +155,7 @@ impl Legatio {
             theme: String::from("Tokyo Storm"),
             ask_conf: true,
         };
+
         self.user_config = Some(read_config().unwrap_or(default_config));
         store_config(self.user_config.as_ref().unwrap()).unwrap();
 
@@ -443,7 +444,7 @@ impl Legatio {
             primary_color,
             secondary_color,
             accent_color,
-            pop_up
+            pop_up,
         )
     }
 
@@ -464,24 +465,24 @@ impl Legatio {
         // Top box
         let top_box = if pop_up {
             Paragraph::new(vec![Line::from("[y]es [n]o")])
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .border_type(BorderType::Thick)
-                    .style(Style::default().fg(accent_color))
-                    .title("[ Confirm ]"),
-            )
-            .style(Style::default().fg(secondary_color))
+                .block(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .border_type(BorderType::Thick)
+                        .style(Style::default().fg(accent_color))
+                        .title("[ Confirm ]"),
+                )
+                .style(Style::default().fg(secondary_color))
         } else {
             Paragraph::new(top_text.to_owned())
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .border_type(BorderType::Thick)
-                    .style(Style::default().fg(primary_color))
-                    .title(top_title),
-            )
-            .style(Style::default().fg(secondary_color))
+                .block(
+                    Block::default()
+                        .borders(Borders::ALL)
+                        .border_type(BorderType::Thick)
+                        .style(Style::default().fg(primary_color))
+                        .title(top_title),
+                )
+                .style(Style::default().fg(secondary_color))
         };
 
         // Scroll box
@@ -689,13 +690,22 @@ impl Legatio {
         if crossterm::event::poll(Duration::from_millis(100))? {
             if let Event::Key(key_event) = event::read()? {
                 let input_event = self.state_specific_keys(key_event); // Get state-specific keys
-                
+
                 return match self.state {
-                    AppState::SelectProject => self.process_select_project_input(input_event, pool).await,
-                    AppState::SelectPrompt => self.process_select_prompt_input(input_event, pool).await,
+                    AppState::SelectProject => {
+                        self.process_select_project_input(input_event, pool).await
+                    }
+                    AppState::SelectPrompt => {
+                        self.process_select_prompt_input(input_event, pool).await
+                    }
                     AppState::AskModel => self.process_ask_model_input(input_event, pool).await,
-                    AppState::EditScrolls => self.process_edit_scrolls_input(input_event, pool).await,
-                    AppState::AskModelConfirmation => self.process_confirmation_popup_input(input_event, pool).await,
+                    AppState::EditScrolls => {
+                        self.process_edit_scrolls_input(input_event, pool).await
+                    }
+                    AppState::AskModelConfirmation => {
+                        self.process_confirmation_popup_input(input_event, pool)
+                            .await
+                    }
                 };
             }
         }
@@ -1031,7 +1041,11 @@ impl Legatio {
     ///
     /// ### Returns:
     /// - `Result<AppState>`: Returns the next state of the application.
-    async fn process_confirmation_popup_input(&mut self, key_event: InputEvent, pool: &SqlitePool) -> Result<AppState> {
+    async fn process_confirmation_popup_input(
+        &mut self,
+        key_event: InputEvent,
+        pool: &SqlitePool,
+    ) -> Result<AppState> {
         match key_event {
             InputEvent::Confirm => {
                 // User confirmed the action
@@ -1079,21 +1093,30 @@ impl Legatio {
             let final_prompt = chain_match_canvas(project).unwrap_or(String::from("."));
 
             let prompt_chain: Option<Vec<AiPrompt>> = match chain {
-                Some(prompts) => {
-                    Some(prompts.iter().map(|p| 
-                        AiPrompt {content: p.content.to_owned(), output: p.output.to_owned()}
-                    ).collect())
-                },
+                Some(prompts) => Some(
+                    prompts
+                        .iter()
+                        .map(|p| AiPrompt {
+                            content: p.content.to_owned(),
+                            output: p.output.to_owned(),
+                        })
+                        .collect(),
+                ),
                 None => None,
             };
 
             let question = Question {
-                system_prompt: if sys_prompt.is_empty() { None } else { Some(sys_prompt) },
+                system_prompt: if sys_prompt.is_empty() {
+                    None
+                } else {
+                    Some(sys_prompt)
+                },
                 messages: prompt_chain,
                 new_prompt: final_prompt.to_owned(),
             };
 
-            let output = ask_question(&self.user_config.as_ref().unwrap().ai_conf, question).await?;
+            let output =
+                ask_question(&self.user_config.as_ref().unwrap().ai_conf, question).await?;
 
             let new_prompt = Prompt::new(
                 &project.project_id,
