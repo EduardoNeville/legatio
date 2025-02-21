@@ -1,5 +1,6 @@
 use ask_ai::config::AiConfig;
 use anyhow::Result;
+use ask_ai::config::Framework;
 use dirs_next::config_dir;
 use serde::Deserialize;
 use serde::Serialize;
@@ -8,9 +9,7 @@ use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
 
-use crate::{
-    utils::{error::AppError, logger::log_error},
-};
+use crate::utils::{error::AppError, logger::log_error};
 
 #[derive(Debug, Deserialize, Serialize)] // Add Serialize to support serialization
 pub struct UserConfig {
@@ -117,4 +116,30 @@ pub fn store_config(user_config: &UserConfig) -> Result<()> {
     })?;
 
     Ok(())
+}
+
+pub fn check_config_files() {
+    let config_dir = get_config_dir()?;
+
+    // Copy default config if missing in config dir
+    if !config_path.join("config.toml").exists() {
+        // Default config for user
+        let default_config = UserConfig {
+            ai_conf: AiConfig {
+                llm: Framework::OpenAI,
+                model: String::from("chatgpt-4o-latest"),
+                max_token: None,
+            },
+            theme: String::from("Tokyo Storm"),
+            ask_conf: true,
+        };
+        store_config(&default_config)
+    }
+
+    // Copy default themes if missing in config dir
+    if !config_dir.join("themes.toml").exists() {
+        let default_themes = PathBuf::from("themes.conf");
+        fs::copy(default_themes, config_dir.join("themes.conf"));
+    }
+
 }

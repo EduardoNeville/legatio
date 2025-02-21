@@ -155,6 +155,7 @@ impl Legatio {
             theme: String::from("Tokyo Storm"),
             ask_conf: true,
         };
+
         self.user_config = Some(read_config().unwrap_or(default_config));
         store_config(self.user_config.as_ref().unwrap()).unwrap();
 

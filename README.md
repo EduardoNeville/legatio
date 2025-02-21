@@ -10,7 +10,7 @@ Welcome to **Legatio**, the innovative terminal-based tool for integrating AI in
 
 Legatio empowers you to:
 1. Manage **projects** as centralized workspaces.
-2. Create and chain **prompts** for dynamic AI collaboration.
+2. Create and chain **prompts** so that you can go back to previous prompts.
 3. Attach and organize **scrolls** (external files) to provide detailed AI context.
 4. Experiment across **branches** to explore ideas without impacting your main work.
 5. Work with different AI APIs (OpenAI, Anthropic, Ollama) that align with your needs and goals.

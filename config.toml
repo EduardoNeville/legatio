@@ -1,0 +1,6 @@
+theme = "Tokyo Storm"
+ask_conf = true
+
+[ai_conf]
+llm = "openai"
+model = "chatgpt-4o-latest"
