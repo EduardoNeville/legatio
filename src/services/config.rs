@@ -118,11 +118,11 @@ pub fn store_config(user_config: &UserConfig) -> Result<()> {
     Ok(())
 }
 
-pub fn check_config_files() -> Result<(), Box<dyn std::error::Error>> {
+pub fn check_config_files() -> Result<(), AppError> {
     let config_dir = get_config_dir()?;
 
     // Copy default config if missing in config dir
-    if !config_path.join("config.toml").exists() {
+    if !config_dir.join("config.toml").exists() {
         // Default config for user
         let default_config = UserConfig {
             ai_conf: AiConfig {
