@@ -2,11 +2,7 @@
 mod tests {
     use legatio::{
         core::project::{
-            delete_project,
-            get_projects,
-            store_project,
-            build_select_project,
-            format_project_title
+            build_select_project, delete_project, format_project_title, get_projects, store_project,
         },
         utils::{logger::initialize_logger, structs::Project},
     };

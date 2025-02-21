@@ -4,9 +4,9 @@ mod tests {
         core::scroll::{
             delete_scroll, get_scrolls, read_file, store_scroll, update_scroll_content,
         },
+        utils::error::AppError,
         utils::logger::initialize_logger,
         utils::structs::Scroll,
-        utils::error::AppError,
     };
     use sqlx::sqlite::SqlitePoolOptions;
     use sqlx::SqlitePool;
@@ -20,7 +20,6 @@ mod tests {
             .connect("sqlite::memory:")
             .await
             .expect("Failed to create database connection pool")
-
     }
 
     #[tokio::test]

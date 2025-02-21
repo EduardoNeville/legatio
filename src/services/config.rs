@@ -1,5 +1,5 @@
-use ask_ai::config::AiConfig;
 use anyhow::Result;
+use ask_ai::config::AiConfig;
 use ask_ai::config::Framework;
 use dirs_next::config_dir;
 use serde::Deserialize;
@@ -118,7 +118,7 @@ pub fn store_config(user_config: &UserConfig) -> Result<()> {
     Ok(())
 }
 
-pub fn check_config_files() {
+pub fn check_config_files() -> Result<(), Box<dyn std::error::Error>> {
     let config_dir = get_config_dir()?;
 
     // Copy default config if missing in config dir
@@ -133,13 +133,15 @@ pub fn check_config_files() {
             theme: String::from("Tokyo Storm"),
             ask_conf: true,
         };
-        store_config(&default_config)
-    }
+        store_config(&default_config).expect("Failed to store default config");
+    };
 
     // Copy default themes if missing in config dir
     if !config_dir.join("themes.toml").exists() {
         let default_themes = PathBuf::from("themes.conf");
-        fs::copy(default_themes, config_dir.join("themes.conf"));
-    }
+        fs::copy(default_themes, config_dir.join("themes.conf"))
+            .expect("Failed to store default themes");
+    };
 
+    Ok(())
 }

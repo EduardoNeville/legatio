@@ -2,12 +2,7 @@
 mod tests {
     use legatio::{
         core::prompt::{
-            delete_prompt,
-            get_prompts,
-            store_prompt,
-            update_prompt,
-            prompt_chain,
-            system_prompt,
+            delete_prompt, get_prompts, prompt_chain, store_prompt, system_prompt, update_prompt,
         },
         utils::structs::{Prompt, Scroll},
     };
