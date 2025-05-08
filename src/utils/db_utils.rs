@@ -68,25 +68,19 @@ pub async fn get_db_pool() -> Result<SqlitePool, AppError> {
             let error_msg = format!("Failed to create projects table: {}", error);
             log_error(&error_msg);
             return Err(AppError::DatabaseError(error_msg));
-        } else {
-            log_info("Projects table created (if not already present).");
         }
 
         if let Err(error) = sqlx::query(create_scrolls_table).execute(&pool).await {
             let error_msg = format!("Failed to create scrolls table: {}", error);
             log_error(&error_msg);
             return Err(AppError::DatabaseError(error_msg));
-        } else {
-            log_info("Scrolls table created (if not already present).");
         }
 
         if let Err(error) = sqlx::query(create_prompts_table).execute(&pool).await {
             let error_msg = format!("Failed to create prompts table: {}", error);
             log_error(&error_msg);
             return Err(AppError::DatabaseError(error_msg));
-        } else {
-            log_info("Prompts table created (if not already present).");
-        }
+        }     
     }
 
     let pool = match SqlitePool::connect(db_url).await {
@@ -112,13 +106,7 @@ pub async fn delete_module(
 
     // Execute the query with the given value as a parameter
     match sqlx::query(&query).bind(column_value).execute(pool).await {
-        Ok(_) => {
-            log_info(&format!(
-                "Successfully deleted row from {} where {} = [{}]",
-                table, column_name, column_value
-            ));
-            Ok(())
-        }
+        Ok(_) => Ok(()),
         Err(error) => {
             let error_msg = format!(
                 "Failed to delete from {}: {} = [{}]: {}",

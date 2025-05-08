@@ -40,11 +40,7 @@ pub fn chain_into_canvas(
         // Generate the prompt chain
         let mut chain = prompt_chain(prompts, prompt);
         chain.reverse(); // Reverse the chain order if needed
-
-        if chain.is_empty() {
-            log_info("No chain generated");
-        }
-
+        
         // Write each prompt and its output to the file manually (without writeln)
         for prompt in chain {
             let prompt_text = format!("# PROMPT {}\n{}\n", prompt.prompt_id, prompt.content);
