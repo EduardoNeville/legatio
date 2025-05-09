@@ -138,9 +138,15 @@ pub fn check_config_files() -> Result<(), AppError> {
 
     // Copy default themes if missing in config dir
     if !config_dir.join("themes.toml").exists() {
-        let default_themes = PathBuf::from("themes.conf");
-        fs::copy(default_themes, config_dir.join("themes.conf"))
-            .expect("Failed to store default themes");
+        let default_themes = include_bytes!("../../defaults/themes.toml");
+        let target_path = config_dir.join("themes.toml");
+        fs::write(&target_path, default_themes).map_err(|e| {
+            AppError::FileError(format!(
+                "Failed to write to file {}: {}",
+                &target_path.to_string_lossy(),
+                e
+            ))
+        })?;
     };
 
     Ok(())
