@@ -10,19 +10,33 @@ use ratatui::{backend::CrosstermBackend, Terminal};
 
 use std::fs::{self, File};
 use std::path::PathBuf;
-use std::time::Duration;
 use std::{io, vec};
 
 use crate::{
     core::{
         canvas::{chain_into_canvas, chain_match_canvas},
         project::{
-            build_select_project, delete_project, format_project_title, get_projects, store_project,
+            build_select_project,
+            delete_project,
+            format_project_title,
+            get_projects,
+            store_project,
         },
         prompt::{
-            delete_prompt, format_prompt, get_prompts, prompt_chain, store_prompt, system_prompt,
+            delete_prompt,
+            format_prompt,
+            get_prompts,
+            prompt_chain,
+            store_prompt,
+            system_prompt,
         },
-        scroll::{delete_scroll, get_scrolls, read_file, store_scroll, update_scroll_content},
+        scroll::{
+            delete_scroll,
+            get_scrolls,
+            read_file,
+            store_scroll,
+            update_scroll_content
+        },
     },
     services::{
         config::{read_config, store_config, UserConfig},
@@ -30,7 +44,7 @@ use crate::{
         search::{item_selector, select_files},
         ui::{extract_theme_colors, usr_prompt_chain, usr_prompts, usr_scrolls},
     },
-    utils::structs::{Project, Prompt},
+    utils::{logger::log_info, structs::{Project, Prompt, Scroll}},
 };
 
 use anyhow::Result;
@@ -45,6 +59,9 @@ pub struct Legatio {
     current_project: Option<Project>,
     current_prompt: Option<Prompt>,
     user_config: Option<UserConfig>,
+    project_list_cache: Option<Vec<Project>>,
+    prompt_list_cache: Option<Vec<Prompt>>,
+    scroll_list_cache: Option<Vec<Scroll>>,
 }
 
 #[derive(Clone, Copy)]
@@ -54,6 +71,7 @@ enum AppState {
     AskModel,
     EditScrolls,
     AskModelConfirmation,
+    Quit,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -122,6 +140,9 @@ impl Legatio {
             current_project: None,
             current_prompt: None,
             user_config: None,
+            project_list_cache: None,
+            prompt_list_cache: None,
+            scroll_list_cache: None,
         }
     }
 
@@ -159,9 +180,10 @@ impl Legatio {
         self.user_config = Some(read_config().unwrap_or(default_config));
         store_config(self.user_config.as_ref().unwrap()).unwrap();
 
-        // Ensure we disable raw mode when application exits
+        // Run the main loop
         let result = self.main_loop(&mut terminal, pool).await;
 
+        // Clean up terminal
         disable_raw_mode()?;
         terminal.show_cursor()?;
         result
@@ -185,20 +207,47 @@ impl Legatio {
         terminal: &mut Terminal<CrosstermBackend<&mut io::Stdout>>,
         pool: &SqlitePool,
     ) -> Result<()> {
-        // Fetch projects for initialization
-        let projects = get_projects(pool).await?;
+        // Fetch all projects from cache
+        let projects = if let Some(cache) = &self.project_list_cache {
+            cache.clone()
+        } else {
+            let p = get_projects(pool).await?;
+            self.project_list_cache = Some(p.clone());
+            p
+        };
         if !projects.is_empty() {
             self.current_project = Some(projects[0].clone());
             self.state = AppState::SelectProject;
         }
 
-        loop {
-            self.draw(terminal, pool).await?;
+        // Initial draw to display the UI
+        self.draw(terminal, pool).await?;
 
-            // Handle input
-            let next_state = self.handle_input(pool).await?;
-            self.state = next_state;
+        let mut idx_loop = 0;
+        // Main event loop: wait for key events
+        loop {
+            log_info(&format!("Pre-Event Loop: {}", idx_loop));
+            // Block until a key event is received
+            if let Event::Key(key_event) = event::read()? {
+                // Process the input
+                log_info(&format!("Event key pressed {:?}: {}", key_event, idx_loop));
+                let next_state = self.handle_input_with_key(pool, key_event).await?;
+                self.state = next_state;
+
+                // Redraw the UI after handling input
+                log_info(&format!("Pre-Draw Loop: {}", idx_loop));
+                self.draw(terminal, pool).await?;
+                log_info(&format!("Post-Draw Loop: {}", idx_loop));
+                // Exit if the state is Quit
+                if matches!(self.state, AppState::Quit) {
+                    break;
+                }
+            }
+
+            idx_loop += 1;
         }
+
+        Ok(())
     }
 
     /// Draws the current state of the application onto the terminal screen.
@@ -216,7 +265,7 @@ impl Legatio {
     /// ### Remarks:
     /// This method is highly state-dependent and processes different inputs in different states.
     async fn draw(
-        &self,
+        &mut self,
         terminal: &mut Terminal<CrosstermBackend<&mut io::Stdout>>,
         pool: &SqlitePool,
     ) -> Result<()> {
@@ -246,7 +295,14 @@ impl Legatio {
                 ];
                 bot_title = "[ Projects ]".to_string();
 
-                let projects: Vec<Project> = get_projects(pool).await?;
+                // Fetch all projects from cache
+                let projects = if let Some(cache) = &self.project_list_cache {
+                    cache.clone()
+                } else {
+                    let p = get_projects(pool).await?;
+                    self.project_list_cache = Some(p.clone());
+                    p
+                };
                 let (items, _) = build_select_project(&projects);
                 bot_items.extend(items);
             }
@@ -267,7 +323,15 @@ impl Legatio {
                         .unwrap_or("[Unnamed Project]");
                     bot_title = format!("[ {} -:- Prompts ]", project_name);
 
-                    let prompts = get_prompts(pool, &project.project_id).await?;
+                    // Fetch all prompts from cache
+                    let prompts = if let Some(cache) = &self.prompt_list_cache {
+                        cache.clone()
+                    } else {
+                        let p = get_prompts(pool, &project.project_id).await?;
+                        self.prompt_list_cache = Some(p.clone());
+                        p
+                    };
+
                     if prompts.is_empty() {
                         bot_items.push(Line::from("This project has no prompts!"));
                     } else {
@@ -312,7 +376,6 @@ impl Legatio {
                             .join("legatio.md"),
                     );
 
-                    let prompts: Option<Vec<Prompt>>;
                     let pmp_chain: Option<Vec<Prompt>>;
                     if file_prompt.is_err() {
                         File::create(
@@ -321,13 +384,20 @@ impl Legatio {
                         )
                         .expect("Could not create file!");
                     } else if prompt.is_some() {
-                        prompts = Some(get_prompts(pool, &project.project_id).await?);
+                        // Fetch all prompts from cache
+                        let prompts = if let Some(cache) = &self.prompt_list_cache {
+                            cache.clone()
+                        } else {
+                            let p = get_prompts(pool, &project.project_id).await?;
+                            self.prompt_list_cache = Some(p.clone());
+                            p
+                        };
 
-                        if prompts.as_ref().unwrap().is_empty() {
+                        if prompts.is_empty() {
                             bot_items.push(Line::from("This project has no prompts!"));
                         } else {
                             pmp_chain = Some(prompt_chain(
-                                prompts.as_ref().unwrap().as_ref(),
+                                prompts.as_ref(),
                                 self.current_prompt.as_ref().unwrap(),
                             ));
 
@@ -353,9 +423,16 @@ impl Legatio {
                 bot_title = "[ Scrolls ]".to_string();
 
                 if let Some(project) = &self.current_project {
-                    let scrolls = get_scrolls(pool, &project.project_id)
-                        .await
-                        .unwrap_or_default();
+                    // Fetch all prompts from cache
+                    let scrolls: Vec<Scroll> = if let Some(cache) = &self.scroll_list_cache {
+                        log_info(&format!("Cache @ EditScrolls: {:?}", cache.clone()));
+                        cache.clone()
+                    } else {
+                        let s = get_scrolls(pool, &project.project_id).await?;
+                        log_info(&format!("Sqlite @ EditScrolls: {:?}", s.clone()));
+                        self.scroll_list_cache = Some(s.clone());
+                        s
+                    };
                     for scroll in scrolls.iter() {
                         let scroll_name =
                             match scroll.scroll_path.strip_prefix(&project.project_path) {
@@ -400,7 +477,6 @@ impl Legatio {
                             .join("legatio.md"),
                     );
 
-                    let prompts: Option<Vec<Prompt>>;
                     let pmp_chain: Option<Vec<Prompt>>;
                     if file_prompt.is_err() {
                         File::create(
@@ -409,13 +485,20 @@ impl Legatio {
                         )
                         .expect("Could not create file!");
                     } else if prompt.is_some() {
-                        prompts = Some(get_prompts(pool, &project.project_id).await?);
+                        // Fetch all prompts from cache
+                        let prompts = if let Some(cache) = &self.prompt_list_cache {
+                            cache.clone()
+                        } else {
+                            let p = get_prompts(pool, &project.project_id).await?;
+                            self.prompt_list_cache = Some(p.clone());
+                            p
+                        };
 
-                        if prompts.as_ref().unwrap().is_empty() {
+                        if prompts.is_empty() {
                             bot_items.push(Line::from("This project has no prompts!"));
                         } else {
                             pmp_chain = Some(prompt_chain(
-                                prompts.as_ref().unwrap().as_ref(),
+                                prompts.as_ref(),
                                 self.current_prompt.as_ref().unwrap(),
                             ));
 
@@ -430,6 +513,8 @@ impl Legatio {
                 }
                 pop_up = true;
             }
+            // TODO: is this correct?
+            AppState::Quit => return Ok(())
         }
 
         // Call render function with prepared data
@@ -672,6 +757,7 @@ impl Legatio {
                 } => InputEvent::Cancel,
                 _ => InputEvent::NoOp,
             },
+            AppState::Quit => InputEvent::Quit,
         }
     }
 
@@ -683,33 +769,27 @@ impl Legatio {
     ///
     /// ### Arguments:
     /// `pool` - The database connection pool to interact with stored data.
+    /// `key_event` Event that will trigger a change in the screen
     ///
     /// ### Returns:
     /// - `Result<AppState>`: Returns the next `AppState` after processing the input.
-    async fn handle_input(&mut self, pool: &SqlitePool) -> Result<AppState> {
-        if crossterm::event::poll(Duration::from_millis(100))? {
-            if let Event::Key(key_event) = event::read()? {
-                let input_event = self.state_specific_keys(key_event); // Get state-specific keys
+    async fn handle_input_with_key(
+        &mut self,
+        pool: &SqlitePool,
+        key_event: KeyEvent,
+    ) -> Result<AppState> {
+        let input_event = self.state_specific_keys(key_event); // Get state-specific keys
 
-                return match self.state {
-                    AppState::SelectProject => {
-                        self.process_select_project_input(input_event, pool).await
-                    }
-                    AppState::SelectPrompt => {
-                        self.process_select_prompt_input(input_event, pool).await
-                    }
-                    AppState::AskModel => self.process_ask_model_input(input_event, pool).await,
-                    AppState::EditScrolls => {
-                        self.process_edit_scrolls_input(input_event, pool).await
-                    }
-                    AppState::AskModelConfirmation => {
-                        self.process_confirmation_popup_input(input_event, pool)
-                            .await
-                    }
-                };
+        match self.state {
+            AppState::SelectProject => self.process_select_project_input(input_event, pool).await,
+            AppState::SelectPrompt => self.process_select_prompt_input(input_event, pool).await,
+            AppState::AskModel => self.process_ask_model_input(input_event, pool).await,
+            AppState::EditScrolls => self.process_edit_scrolls_input(input_event, pool).await,
+            AppState::AskModelConfirmation => {
+                self.process_confirmation_popup_input(input_event, pool).await
             }
+            AppState::Quit => Ok(AppState::Quit)
         }
-        Ok(self.state)
     }
 
     /// Processes user input when the application is in the `AppState::SelectProject` state.
@@ -733,8 +813,14 @@ impl Legatio {
     ) -> Result<AppState> {
         match key_event {
             InputEvent::Select => {
-                // Fetch all projects
-                let projects = get_projects(pool).await?;
+                // Fetch all projects from cache
+                let projects = if let Some(cache) = &self.project_list_cache {
+                    cache.clone()
+                } else {
+                    let p = get_projects(pool).await?;
+                    self.project_list_cache = Some(p.clone());
+                    p
+                };
                 if !projects.is_empty() {
                     let (_, str_names) = build_select_project(&projects);
                     if let Some(selected_project) = item_selector(str_names.clone())? {
@@ -758,7 +844,14 @@ impl Legatio {
             }
             InputEvent::New => {
                 let selected_dir = select_files(None).unwrap().unwrap();
-                let projects = get_projects(pool).await?;
+                // Fetch all projects from cache
+                let projects = if let Some(cache) = &self.project_list_cache {
+                    cache.clone()
+                } else {
+                    let p = get_projects(pool).await?;
+                    self.project_list_cache = Some(p.clone());
+                    p
+                };
                 let old_proj = projects.iter().find(|p| p.project_path == selected_dir);
                 if old_proj.is_some() {
                     self.current_project = Some(old_proj.unwrap().to_owned());
@@ -770,7 +863,14 @@ impl Legatio {
                 return Ok(AppState::EditScrolls);
             }
             InputEvent::Delete => {
-                let projects = get_projects(pool).await?;
+                // Fetch all projects from cache
+                let projects = if let Some(cache) = &self.project_list_cache {
+                    cache.clone()
+                } else {
+                    let p = get_projects(pool).await?;
+                    self.project_list_cache = Some(p.clone());
+                    p
+                };
                 if !projects.is_empty() {
                     let (_, str_names) = build_select_project(&projects);
                     if let Some(selected_project) = item_selector(str_names.clone())? {
@@ -780,19 +880,16 @@ impl Legatio {
                             .unwrap();
 
                         delete_project(pool, &projects[sel_idx].project_id).await?;
+                        self.project_list_cache = None;
                     } else {
                         return Ok(AppState::SelectProject);
                     }
                 }
                 return Ok(AppState::SelectProject);
             }
-            InputEvent::Quit => {
-                disable_raw_mode()?;
-                std::process::exit(0);
-            }
-            _ => {}
+            InputEvent::Quit => Ok(AppState::Quit),
+            _ => Ok(AppState::SelectProject),
         }
-        Ok(AppState::SelectProject)
     }
 
     /// Processes user input in the `AppState::SelectPrompt` state.
@@ -818,7 +915,15 @@ impl Legatio {
         match key_event {
             InputEvent::Select => {
                 if let Some(project) = &self.current_project {
-                    let prompts = get_prompts(pool, &project.project_id).await?;
+                    // Fetch all prompts from cache
+                    let prompts = if let Some(cache) = &self.prompt_list_cache {
+                        cache.clone()
+                    } else {
+                        let p = get_prompts(pool, &project.project_id).await?;
+                        self.prompt_list_cache = Some(p.clone());
+                        p
+                    };
+
                     if !prompts.is_empty() {
                         let project_name = project
                             .project_path
@@ -883,6 +988,7 @@ impl Legatio {
                             .position(|p| p == &selected_prompt)
                             .unwrap();
                         delete_prompt(pool, &prompts[index]).await?;
+                        self.prompt_list_cache = None;
                     } else {
                         return Ok(AppState::SelectPrompt);
                     }
@@ -932,22 +1038,12 @@ impl Legatio {
                     return self.produce_question(pool).await;
                 }
             }
-            InputEvent::SwitchBranch => {
-                return Ok(AppState::SelectPrompt);
-            }
-            InputEvent::EditScrolls => {
-                return Ok(AppState::EditScrolls);
-            }
-            InputEvent::ChangeProject => {
-                return Ok(AppState::SelectProject);
-            }
-            InputEvent::Quit => {
-                disable_raw_mode()?;
-                std::process::exit(0);
-            }
-            _ => {}
+            InputEvent::SwitchBranch => Ok(AppState::SelectPrompt),
+            InputEvent::EditScrolls => Ok(AppState::EditScrolls),
+            InputEvent::ChangeProject => Ok(AppState::SelectProject),
+            InputEvent::Quit => Ok(AppState::Quit),
+            _ => Ok(AppState::AskModel),
         }
-        Ok(AppState::AskModel)
     }
 
     /// Processes user input in the `AppState::EditScrolls` state.
@@ -977,7 +1073,14 @@ impl Legatio {
                         .unwrap()
                         .unwrap_or(String::from(""));
                     enable_raw_mode()?;
-                    let scrolls = get_scrolls(pool, &project.project_id).await?;
+                    // Fetch all scrolls from cache
+                    let scrolls: Vec<Scroll> = if let Some(cache) = &self.scroll_list_cache {
+                        cache.clone()
+                    } else {
+                        let s = get_scrolls(pool, &project.project_id).await?;
+                        self.scroll_list_cache = Some(s.clone());
+                        s
+                    };
                     let old_scroll = scrolls.iter().find(|s| s.scroll_path == selected_scroll);
                     if old_scroll.is_none() {
                         let new_scroll = read_file(&selected_scroll, &project.project_id, None)?;
@@ -988,7 +1091,14 @@ impl Legatio {
             }
             InputEvent::Delete => {
                 if let Some(project) = &self.current_project {
-                    let scrolls = get_scrolls(pool, &project.project_id).await?;
+                    // Fetch all scrolls from cache
+                    let scrolls: Vec<Scroll> = if let Some(cache) = &self.scroll_list_cache {
+                        cache.clone()
+                    } else {
+                        let s = get_scrolls(pool, &project.project_id).await?;
+                        self.scroll_list_cache = Some(s.clone());
+                        s
+                    };
                     let scroll_names = scrolls
                         .iter()
                         .map(|s| s.scroll_path.clone())
@@ -1004,6 +1114,7 @@ impl Legatio {
 
                         if idx < scrolls.len() {
                             delete_scroll(pool, &scrolls[idx].scroll_id).await?;
+                            self.scroll_list_cache = None;
                         }
                     } else {
                         enable_raw_mode()?;
@@ -1012,22 +1123,12 @@ impl Legatio {
                 }
                 return Ok(AppState::EditScrolls);
             }
-            InputEvent::Select => {
-                return Ok(AppState::SelectPrompt);
-            }
-            InputEvent::ChangeProject => {
-                return Ok(AppState::SelectProject);
-            }
-            InputEvent::AskModel => {
-                return Ok(AppState::AskModel);
-            }
-            InputEvent::Quit => {
-                disable_raw_mode()?;
-                std::process::exit(0);
-            }
-            _ => {}
+            InputEvent::SwitchBranch => Ok(AppState::SelectPrompt),
+            InputEvent::ChangeProject => Ok(AppState::SelectProject),
+            InputEvent::AskModel => Ok(AppState::AskModel),
+            InputEvent::Quit => Ok(AppState::Quit),
+            _ => Ok(AppState::EditScrolls),
         }
-        Ok(AppState::EditScrolls)
     }
 
     /// Processes user input in the `AppState::AskModelConfirmation` state.
@@ -1075,7 +1176,14 @@ impl Legatio {
     /// - `Result<AppState>`: The next state of the application is determined (usually remains `AppState::AskModel`).
     async fn produce_question(&mut self, pool: &SqlitePool) -> Result<AppState> {
         if let Some(project) = &self.current_project {
-            let scrolls = get_scrolls(pool, &project.project_id).await?;
+            // Fetch all prompts from cache
+            let scrolls: Vec<Scroll> = if let Some(cache) = &self.scroll_list_cache {
+                cache.clone()
+            } else {
+                let s = get_scrolls(pool, &project.project_id).await?;
+                self.scroll_list_cache = Some(s.clone());
+                s
+            };
             let mut new_scrolls = Vec::new();
             for scroll in scrolls.iter() {
                 let new_scroll = update_scroll_content(pool, scroll).await?;
