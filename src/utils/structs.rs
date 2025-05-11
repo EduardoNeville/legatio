@@ -20,7 +20,7 @@ impl Project {
 ///
 /// A `Scroll` is associated with a project, and it stores a unique ID, its file path,
 /// the file's content, and the project ID it belongs to.
-#[derive(Debug, FromRow)]
+#[derive(Clone, Debug, FromRow)]
 pub struct Scroll {
     pub scroll_id: String,   // Unique identifier for the Scroll
     pub scroll_path: String, // The file path associated with the Scroll
