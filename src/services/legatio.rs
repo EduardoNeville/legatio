@@ -44,7 +44,7 @@ use crate::{
         search::{item_selector, select_files},
         ui::{extract_theme_colors, usr_prompt_chain, usr_prompts, usr_scrolls},
     },
-    utils::{logger::log_info, structs::{Project, Prompt, Scroll}},
+    utils::structs::{Project, Prompt, Scroll},
 };
 
 use anyhow::Result;
@@ -223,28 +223,22 @@ impl Legatio {
         // Initial draw to display the UI
         self.draw(terminal, pool).await?;
 
-        let mut idx_loop = 0;
         // Main event loop: wait for key events
         loop {
-            log_info(&format!("Pre-Event Loop: {}", idx_loop));
             // Block until a key event is received
             if let Event::Key(key_event) = event::read()? {
                 // Process the input
-                log_info(&format!("Event key pressed {:?}: {}", key_event, idx_loop));
                 let next_state = self.handle_input_with_key(pool, key_event).await?;
                 self.state = next_state;
 
                 // Redraw the UI after handling input
-                log_info(&format!("Pre-Draw Loop: {}", idx_loop));
                 self.draw(terminal, pool).await?;
-                log_info(&format!("Post-Draw Loop: {}", idx_loop));
+
                 // Exit if the state is Quit
                 if matches!(self.state, AppState::Quit) {
                     break;
                 }
             }
-
-            idx_loop += 1;
         }
 
         Ok(())
@@ -425,11 +419,9 @@ impl Legatio {
                 if let Some(project) = &self.current_project {
                     // Fetch all prompts from cache
                     let scrolls: Vec<Scroll> = if let Some(cache) = &self.scroll_list_cache {
-                        log_info(&format!("Cache @ EditScrolls: {:?}", cache.clone()));
                         cache.clone()
                     } else {
                         let s = get_scrolls(pool, &project.project_id).await?;
-                        log_info(&format!("Sqlite @ EditScrolls: {:?}", s.clone()));
                         self.scroll_list_cache = Some(s.clone());
                         s
                     };
@@ -829,6 +821,10 @@ impl Legatio {
                             .position(|p| *p == selected_project)
                             .unwrap();
                         self.current_project = Some(projects[sel_idx].clone());
+
+                        // Clear cache for new project
+                        self.scroll_list_cache = None;
+                        self.prompt_list_cache = None;
                         return Ok(AppState::SelectPrompt);
                     } else {
                         enable_raw_mode()?;
@@ -839,6 +835,11 @@ impl Legatio {
                     let project = Project::new(&selected_dir);
                     store_project(pool, &project).await?;
                     self.current_project = Some(project.clone());
+                    // Clear cache
+                    self.project_list_cache = Some(vec![project]);
+                    // Clear cache for new project
+                    self.scroll_list_cache = None;
+                    self.prompt_list_cache = None;
                     return Ok(AppState::EditScrolls);
                 }
             }
@@ -859,7 +860,12 @@ impl Legatio {
                     let project = Project::new(&selected_dir);
                     store_project(pool, &project).await?;
                     self.current_project = Some(project.to_owned());
+                    // Clear project cache
+                    self.project_list_cache = None;
                 }
+                // Clear cache for new project
+                self.scroll_list_cache = None;
+                self.prompt_list_cache = None;
                 return Ok(AppState::EditScrolls);
             }
             InputEvent::Delete => {
@@ -880,6 +886,7 @@ impl Legatio {
                             .unwrap();
 
                         delete_project(pool, &projects[sel_idx].project_id).await?;
+                        // Clear the cache
                         self.project_list_cache = None;
                     } else {
                         return Ok(AppState::SelectProject);
@@ -988,6 +995,8 @@ impl Legatio {
                             .position(|p| p == &selected_prompt)
                             .unwrap();
                         delete_prompt(pool, &prompts[index]).await?;
+
+                        // Clear the cache
                         self.prompt_list_cache = None;
                     } else {
                         return Ok(AppState::SelectPrompt);
@@ -1085,6 +1094,8 @@ impl Legatio {
                     if old_scroll.is_none() {
                         let new_scroll = read_file(&selected_scroll, &project.project_id, None)?;
                         store_scroll(pool, &new_scroll).await?;
+                        // Initial scroll
+                        self.scroll_list_cache = Some(vec![new_scroll]);
                     }
                 }
                 return Ok(AppState::EditScrolls);
@@ -1114,6 +1125,8 @@ impl Legatio {
 
                         if idx < scrolls.len() {
                             delete_scroll(pool, &scrolls[idx].scroll_id).await?;
+                            
+                            // Clear the cache
                             self.scroll_list_cache = None;
                         }
                     } else {
@@ -1238,6 +1251,9 @@ impl Legatio {
 
             store_prompt(pool, &new_prompt).await?;
             self.current_prompt = Some(new_prompt);
+
+            // Clear cache
+            self.prompt_list_cache = None;
 
             let mut new_prompts = prompts.clone();
             new_prompts.push(self.current_prompt.as_ref().unwrap().clone());
