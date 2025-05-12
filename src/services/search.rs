@@ -59,6 +59,42 @@ pub fn select_files(dir_path: Option<&str>) -> Result<Option<String>> {
     Ok(file)
 }
 
+pub fn select_directories(dir_path: Option<&str>) -> Result<Option<String>> {
+    disable_raw_mode()
+        .map_err(|_| AppError::UnexpectedError("Failed to disable raw mode".into()))?;
+    
+    let mut picker = PickerOptions::default()
+        .config(Config::DEFAULT.match_paths())
+        .picker(DirEntryRender);
+
+    let root: PathBuf = dir_path.map(Into::into).unwrap_or_else(|| "/home/".into());
+
+    let injector = picker.injector();
+    spawn(move || {
+        WalkBuilder::new(root).build_parallel().run(|| {
+            let injector = injector.clone();
+            Box::new(move |walk_res| {
+                if let Ok(entry) = walk_res {
+                    if let Ok(metadata) = entry.metadata() {
+                        if metadata.is_dir() {
+                            injector.push(entry);
+                        }
+                    }
+                }
+                WalkState::Continue
+            })
+        });
+    });
+
+    let selected: Option<String> = picker
+        .pick()
+        .map_err(|_| AppError::UnexpectedError("Picker failed to pick a directory".into()))?
+        .map(|entry| entry.path().display().to_string());
+
+    enable_raw_mode().map_err(|_| AppError::UnexpectedError("Failed to enable raw mode".into()))?;
+    Ok(selected)
+}
+
 pub fn item_selector(items: Vec<String>) -> Result<Option<String>> {
     disable_raw_mode().map_err(|e| {
         log_error(&format!("Failed to disable raw mode. Reason: {}", e));

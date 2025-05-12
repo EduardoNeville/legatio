@@ -41,7 +41,7 @@ use crate::{
     services::{
         config::{read_config, store_config, UserConfig},
         //model::{ask_question, Question, LLM},
-        search::{item_selector, select_files},
+        search::{item_selector, select_files, select_directories},
         ui::{extract_theme_colors, usr_prompt_chain, usr_prompts, usr_scrolls},
     },
     utils::structs::{Project, Prompt, Scroll},
@@ -831,7 +831,7 @@ impl Legatio {
                         return Ok(AppState::SelectProject);
                     }
                 } else {
-                    let selected_dir = select_files(None).unwrap().unwrap();
+                    let selected_dir = select_directories(None).unwrap().unwrap();
                     let project = Project::new(&selected_dir);
                     store_project(pool, &project).await?;
                     self.current_project = Some(project.clone());
@@ -844,7 +844,7 @@ impl Legatio {
                 }
             }
             InputEvent::New => {
-                let selected_dir = select_files(None).unwrap().unwrap();
+                let selected_dir = select_directories(None).unwrap().unwrap();
                 // Fetch all projects from cache
                 let projects = if let Some(cache) = &self.project_list_cache {
                     cache.clone()
