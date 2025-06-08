@@ -44,7 +44,7 @@ nucleo-picker = "0.8.0"
 uuid = { version = "1.11.0", features = ["v4"] }
 
 # Models
-ask_ai = "0.1.1"
+ask_ai = "0.1.4"
 
 # Ui
 ratatui = "0.29.0"
