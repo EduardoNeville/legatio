@@ -80,7 +80,7 @@ pub async fn get_db_pool() -> Result<SqlitePool, AppError> {
             let error_msg = format!("Failed to create prompts table: {}", error);
             log_error(&error_msg);
             return Err(AppError::DatabaseError(error_msg));
-        }     
+        }
     }
 
     let pool = match SqlitePool::connect(db_url).await {

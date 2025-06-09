@@ -16,27 +16,12 @@ use crate::{
     core::{
         canvas::{chain_into_canvas, chain_match_canvas},
         project::{
-            build_select_project,
-            delete_project,
-            format_project_title,
-            get_projects,
-            store_project,
+            build_select_project, delete_project, format_project_title, get_projects, store_project,
         },
         prompt::{
-            delete_prompt,
-            format_prompt,
-            get_prompts,
-            prompt_chain,
-            store_prompt,
-            system_prompt,
+            delete_prompt, format_prompt, get_prompts, prompt_chain, store_prompt, system_prompt,
         },
-        scroll::{
-            delete_scroll,
-            get_scrolls,
-            read_file,
-            store_scroll,
-            update_scroll_content
-        },
+        scroll::{delete_scroll, get_scrolls, read_file, store_scroll, update_scroll_content},
     },
     services::{
         config::{read_config, store_config, UserConfig},
@@ -170,7 +155,7 @@ impl Legatio {
         let default_config = UserConfig {
             ai_conf: AiConfig {
                 llm: Framework::OpenAI,
-                model: String::from("chatgpt-4o-latest"),
+                model: String::from("gpt-4.1"),
                 max_token: None,
             },
             theme: String::from("Tokyo Storm"),
@@ -506,7 +491,7 @@ impl Legatio {
                 pop_up = true;
             }
             // TODO: is this correct?
-            AppState::Quit => return Ok(())
+            AppState::Quit => return Ok(()),
         }
 
         // Call render function with prepared data
@@ -778,9 +763,10 @@ impl Legatio {
             AppState::AskModel => self.process_ask_model_input(input_event, pool).await,
             AppState::EditScrolls => self.process_edit_scrolls_input(input_event, pool).await,
             AppState::AskModelConfirmation => {
-                self.process_confirmation_popup_input(input_event, pool).await
+                self.process_confirmation_popup_input(input_event, pool)
+                    .await
             }
-            AppState::Quit => Ok(AppState::Quit)
+            AppState::Quit => Ok(AppState::Quit),
         }
     }
 
@@ -831,7 +817,11 @@ impl Legatio {
                         return Ok(AppState::SelectProject);
                     }
                 } else {
-                    let selected_dir = select_files(None).unwrap().unwrap();
+                    // Select dir but if none selected go to prev state
+                    let selected_dir = match select_files(None)? {
+                        None => return Ok(AppState::SelectProject),
+                        Some(dir) => dir,
+                    };
                     let project = Project::new(&selected_dir);
                     store_project(pool, &project).await?;
                     self.current_project = Some(project.clone());
@@ -844,7 +834,12 @@ impl Legatio {
                 }
             }
             InputEvent::New => {
-                let selected_dir = select_files(None).unwrap().unwrap();
+                // Select dir but if none selected go to prev state
+                let selected_dir = match select_files(None)? {
+                    None => return Ok(AppState::SelectProject),
+                    Some(dir) => dir,
+                };
+
                 // Fetch all projects from cache
                 let projects = if let Some(cache) = &self.project_list_cache {
                     cache.clone()
@@ -1078,9 +1073,12 @@ impl Legatio {
             InputEvent::New => {
                 if let Some(project) = &self.current_project {
                     disable_raw_mode()?;
-                    let selected_scroll = select_files(Some(&project.project_path))
-                        .unwrap()
-                        .unwrap_or(String::from(""));
+                    // Select files but if none selected go to prev state
+                    let selected_scroll = match select_files(Some(&project.project_path))? {
+                        None => return Ok(AppState::EditScrolls),
+                        Some(scroll) => scroll,
+                    };
+
                     enable_raw_mode()?;
                     // Fetch all scrolls from cache
                     let scrolls: Vec<Scroll> = if let Some(cache) = &self.scroll_list_cache {
@@ -1125,7 +1123,7 @@ impl Legatio {
 
                         if idx < scrolls.len() {
                             delete_scroll(pool, &scrolls[idx].scroll_id).await?;
-                            
+
                             // Clear the cache
                             self.scroll_list_cache = None;
                         }

@@ -160,9 +160,9 @@ pub fn prompt_chain(prompts: &[Prompt], prompt: &Prompt) -> Vec<Prompt> {
 }
 
 pub fn format_prompt(p: &Prompt) -> (String, String) {
-    let p_str = format!(" |- Prompt: {}", p.content.replace('\n', " ").to_string());
+    let p_str = format!(" |- Prompt: {}", p.content.replace('\n', " "));
 
-    let o_str = format!(" |  Output: {}", p.output.replace('\n', " ").to_string());
+    let o_str = format!(" |  Output: {}", p.output.replace('\n', " "));
 
     (p_str, o_str)
 }
