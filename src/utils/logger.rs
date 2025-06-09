@@ -4,7 +4,7 @@ use std::sync::Mutex;
 
 use anyhow::Result;
 use chrono::Local;
-use log::{Level, Log, Metadata, Record, SetLoggerError};
+use log::{Log, Metadata, Record};
 
 use crate::services::config::get_config_dir;
 

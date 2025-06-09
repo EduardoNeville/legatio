@@ -1,4 +1,4 @@
-use crate::utils::logger::{log_error, log_info};
+use crate::utils::logger::log_error;
 use crate::{
     core::prompt::prompt_chain,
     utils::structs::{Project, Prompt},

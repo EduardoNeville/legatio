@@ -170,12 +170,12 @@ pub fn format_prompt(p: &Prompt) -> (String, String) {
 pub fn format_prompt_depth(p: &Prompt, b_depth: &str) -> (String, String) {
     let p_str = format!(
         "{b_depth}> Prompt: {}",
-        p.content.replace('\n', " ").to_string()
+        p.content.replace('\n', " ")
     );
 
     let o_str = format!(
         "{b_depth}> Output: {}",
-        p.output.replace('\n', " ").to_string()
+        p.output.replace('\n', " ")
     );
 
     (p_str, o_str)

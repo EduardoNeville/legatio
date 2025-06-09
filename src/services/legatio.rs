@@ -811,10 +811,10 @@ impl Legatio {
                         // Clear cache for new project
                         self.scroll_list_cache = None;
                         self.prompt_list_cache = None;
-                        return Ok(AppState::SelectPrompt);
+                        Ok(AppState::SelectPrompt)
                     } else {
                         enable_raw_mode()?;
-                        return Ok(AppState::SelectProject);
+                        Ok(AppState::SelectProject)
                     }
                 } else {
                     // Select dir but if none selected go to prev state
@@ -830,7 +830,7 @@ impl Legatio {
                     // Clear cache for new project
                     self.scroll_list_cache = None;
                     self.prompt_list_cache = None;
-                    return Ok(AppState::EditScrolls);
+                    Ok(AppState::EditScrolls)
                 }
             }
             InputEvent::New => {
@@ -861,7 +861,7 @@ impl Legatio {
                 // Clear cache for new project
                 self.scroll_list_cache = None;
                 self.prompt_list_cache = None;
-                return Ok(AppState::EditScrolls);
+                Ok(AppState::EditScrolls)
             }
             InputEvent::Delete => {
                 // Fetch all projects from cache
@@ -887,7 +887,7 @@ impl Legatio {
                         return Ok(AppState::SelectProject);
                     }
                 }
-                return Ok(AppState::SelectProject);
+                Ok(AppState::SelectProject)
             }
             InputEvent::Quit => Ok(AppState::Quit),
             _ => Ok(AppState::SelectProject),
@@ -1037,7 +1037,7 @@ impl Legatio {
             InputEvent::AskModel => {
                 if self.user_config.is_some() && self.user_config.as_ref().unwrap().ask_conf {
                     // Require confirmation for specific models
-                    return Ok(AppState::AskModelConfirmation);
+                    Ok(AppState::AskModelConfirmation)
                 } else {
                     return self.produce_question(pool).await;
                 }
@@ -1096,7 +1096,7 @@ impl Legatio {
                         self.scroll_list_cache = Some(vec![new_scroll]);
                     }
                 }
-                return Ok(AppState::EditScrolls);
+                Ok(AppState::EditScrolls)
             }
             InputEvent::Delete => {
                 if let Some(project) = &self.current_project {
@@ -1132,7 +1132,7 @@ impl Legatio {
                         return Ok(AppState::EditScrolls);
                     }
                 }
-                return Ok(AppState::EditScrolls);
+                Ok(AppState::EditScrolls)
             }
             InputEvent::SwitchBranch => Ok(AppState::SelectPrompt),
             InputEvent::ChangeProject => Ok(AppState::SelectProject),
@@ -1211,18 +1211,13 @@ impl Legatio {
 
             let final_prompt = chain_match_canvas(project).unwrap_or(String::from("."));
 
-            let prompt_chain: Option<Vec<AiPrompt>> = match chain {
-                Some(prompts) => Some(
-                    prompts
+            let prompt_chain: Option<Vec<AiPrompt>> = chain.map(|prompts| prompts
                         .iter()
                         .map(|p| AiPrompt {
                             content: p.content.to_owned(),
                             output: p.output.to_owned(),
                         })
-                        .collect(),
-                ),
-                None => None,
-            };
+                        .collect());
 
             let question = Question {
                 system_prompt: if sys_prompt.is_empty() {
