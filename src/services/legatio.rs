@@ -29,7 +29,7 @@ use crate::{
         search::{item_selector, select_files},
         ui::{extract_theme_colors, usr_prompt_chain, usr_prompts, usr_scrolls},
     },
-    utils::structs::{Project, Prompt, Scroll},
+    utils::{logger::log_info, structs::{Project, Prompt, Scroll}},
 };
 
 use anyhow::Result;
@@ -164,6 +164,7 @@ impl Legatio {
 
         self.user_config = Some(read_config().unwrap_or(default_config));
         store_config(self.user_config.as_ref().unwrap()).unwrap();
+        log_info(&&format!("UserConfig: {:?}", &self.user_config));
 
         // Run the main loop
         let result = self.main_loop(&mut terminal, pool).await;
@@ -490,7 +491,6 @@ impl Legatio {
                 }
                 pop_up = true;
             }
-            // TODO: is this correct?
             AppState::Quit => return Ok(()),
         }
 
@@ -1081,19 +1081,19 @@ impl Legatio {
 
                     enable_raw_mode()?;
                     // Fetch all scrolls from cache
-                    let scrolls: Vec<Scroll> = if let Some(cache) = &self.scroll_list_cache {
+                    let mut scrolls: Vec<Scroll> = if let Some(cache) = &self.scroll_list_cache {
                         cache.clone()
                     } else {
                         let s = get_scrolls(pool, &project.project_id).await?;
                         self.scroll_list_cache = Some(s.clone());
                         s
                     };
-                    let old_scroll = scrolls.iter().find(|s| s.scroll_path == selected_scroll);
-                    if old_scroll.is_none() {
+                    // New scroll will be added
+                    if !scrolls.iter().any(|s| s.scroll_path == selected_scroll) {
                         let new_scroll = read_file(&selected_scroll, &project.project_id, None)?;
                         store_scroll(pool, &new_scroll).await?;
-                        // Initial scroll
-                        self.scroll_list_cache = Some(vec![new_scroll]);
+                        scrolls.push(new_scroll);
+                        self.scroll_list_cache = Some(scrolls);
                     }
                 }
                 Ok(AppState::EditScrolls)
@@ -1229,8 +1229,28 @@ impl Legatio {
                 new_prompt: final_prompt.to_owned(),
             };
 
-            let output =
-                ask_question(&self.user_config.as_ref().unwrap().ai_conf, question).await?;
+
+            // Debuging
+            //let output = String::from("Not the output");
+            let ai_config = &self.user_config.as_ref().unwrap().ai_conf;
+            log_info(&format!("UserConfig: {:?}", ai_config));
+            let output = ask_question(ai_config, question).await?;
+            //let err = ask_question(&self.user_config.as_ref().unwrap().ai_conf, question).await.err().expect("Should fail unsupported model");
+
+            //match err {
+            //    AppError::ApiError { model_name: n, failure_str } => {
+            //        assert_eq!(n, "anthropic");
+            //        let failure_lc = failure_str.to_lowercase();
+            //        assert!(
+            //            failure_lc.contains("model not supported")
+            //            || failure_lc.contains("unsupported model")
+            //            || failure_lc.contains("not_found_error")
+            //            || failure_lc.contains("404"),
+            //            "failure_str: {}", failure_str
+            //        );
+            //    }
+            //    other => panic!("Expected AppError::ApiError, got {:?}", other),
+            //}
 
             let new_prompt = Prompt::new(
                 &project.project_id,

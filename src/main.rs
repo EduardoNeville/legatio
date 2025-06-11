@@ -7,6 +7,8 @@ mod utils;
 
 use anyhow::Result;
 
+use crate::utils::logger::log_info;
+
 /// # Legatio: An AI-Powered Workflow Management Tool
 ///
 /// `Legatio` is a terminal-based framework for managing and interacting with AI workflows. It allows users
