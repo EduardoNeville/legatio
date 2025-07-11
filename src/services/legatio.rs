@@ -63,6 +63,7 @@ enum AppState {
 enum InputEvent {
     Select,
     New,
+    NewAnywhere,
     Delete,
     SwitchBranch,
     ChangeProject,
@@ -393,7 +394,8 @@ impl Legatio {
             }
             AppState::EditScrolls => {
                 top_text = vec![
-                    Line::from("[n] New Scroll"),
+                    Line::from("[n] New Scroll from directory"),
+                    Line::from("[@] New Scroll from any directory"),
                     Line::from("[d] Delete Scroll"),
                     Line::from("[a] Ask Model"),
                     Line::from("[s] Switch Branch"),
@@ -696,6 +698,11 @@ impl Legatio {
                     modifiers: KeyModifiers::NONE,
                     ..
                 } => InputEvent::New,
+                KeyEvent {
+                    code: KeyCode::Char('@'),
+                    modifiers: KeyModifiers::NONE,
+                    ..
+                } => InputEvent::NewAnywhere,
                 KeyEvent {
                     code: KeyCode::Char('d'),
                     modifiers: KeyModifiers::NONE,
@@ -1070,11 +1077,22 @@ impl Legatio {
         pool: &SqlitePool,
     ) -> Result<AppState> {
         match key_event {
-            InputEvent::New => {
+            InputEvent::New | InputEvent::NewAnywhere => {
                 if let Some(project) = &self.current_project {
+                    log_info(&format!("Pressed key {:?}", key_event));
                     disable_raw_mode()?;
                     // Select files but if none selected go to prev state
-                    let selected_scroll = match select_files(Some(&project.project_path))? {
+                    let selected_scroll = match select_files(
+                            match key_event {
+                                InputEvent::New => {
+                                    Some(&project.project_path)
+                                },
+                                InputEvent::NewAnywhere => {
+                                    None
+                                },
+                                _ => None
+                            }
+                        )? {
                         None => return Ok(AppState::EditScrolls),
                         Some(scroll) => scroll,
                     };
