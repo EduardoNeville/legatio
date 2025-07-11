@@ -34,7 +34,12 @@ pub async fn usr_scrolls(pool: &SqlitePool, project: &Project) -> Result<Vec<Str
 
     Ok(scrolls
         .into_iter()
-        .filter_map(|row| row.scroll_path.split("/").last().map(|s| s.to_string()))
+        .filter_map(|row| match row.scroll_path.strip_prefix(&project.project_path) {
+            Some(remaining) => {
+                Some(remaining.to_string())
+            }
+            None => Some(row.scroll_path.to_string()),
+        })
         .collect())
 }
 

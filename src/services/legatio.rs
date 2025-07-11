@@ -417,7 +417,7 @@ impl Legatio {
                         let scroll_name =
                             match scroll.scroll_path.strip_prefix(&project.project_path) {
                                 Some(remaining) => {
-                                    remaining.strip_prefix('/').unwrap_or(remaining).to_string()
+                                    remaining.to_string()
                                 }
                                 None => scroll.scroll_path.to_string(),
                             };
