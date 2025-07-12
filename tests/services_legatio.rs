@@ -3,15 +3,11 @@ use ask_ai::{
     ask_ai::ask_question,
     config::{AiConfig, Framework, Question},
 };
-use legatio::services::config::{UserConfig, store_config};
-use legatio::utils::structs::Project;
-use legatio::services::legatio::Legatio;
+use legatio::services::config::UserConfig;
 
 use httpmock::prelude::*;
 use serial_test::serial;
-use sqlx::{sqlite::SqlitePoolOptions};
 use std::env;
-use tempfile::NamedTempFile;
 use tokio;
 
 #[tokio::test]
@@ -39,7 +35,10 @@ async fn test_legatio_model_request_flow_with_mock_openai() {
         eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
         return;
     }
-    env::set_var("OPENAI_API_URL", format!("{}/v1/chat/completions", server.base_url()));
+    env::set_var(
+        "OPENAI_API_URL",
+        format!("{}/v1/chat/completions", server.base_url()),
+    );
 
     // 2. Setup config
     let user_conf = UserConfig {
@@ -75,11 +74,16 @@ async fn test_legatio_model_request_flow_with_mock_openai() {
     );
 
     // 5.2 RUN the model request logic (as in your Legatio flow)
-    let result = ask_question(&AiConfig {
+    let result = ask_question(
+        &AiConfig {
             llm: Framework::OpenAI,
             model: "gpt-4.1".into(),
             max_token: Some(256),
-        }, q).await.expect("Should get OpenAI mock reply");
+        },
+        q,
+    )
+    .await
+    .expect("Should get OpenAI mock reply");
 
     assert_eq!(result, "Mocked reply from OpenAI");
     mock.assert();
@@ -113,7 +117,10 @@ async fn test_legatio_model_request_flow_with_mock_anthropic() {
         eprintln!("Skipping test: ANTHROPIC_API_KEY not set");
         return;
     }
-    env::set_var("ANTHROPIC_API_URL", format!("{}/v1/messages", server.base_url()));
+    env::set_var(
+        "ANTHROPIC_API_URL",
+        format!("{}/v1/messages", server.base_url()),
+    );
 
     // 2. Setup config
     let user_conf = UserConfig {
@@ -149,11 +156,16 @@ async fn test_legatio_model_request_flow_with_mock_anthropic() {
     );
 
     // 5.2 RUN the model request logic (as in your Legatio flow)
-    let result = ask_question(&AiConfig {
+    let result = ask_question(
+        &AiConfig {
             llm: Framework::Anthropic,
             model: "claude-3-5-haiku-20241022".into(),
             max_token: Some(256),
-        }, q).await.expect("Should get Anthropic mock reply");
+        },
+        q,
+    )
+    .await
+    .expect("Should get Anthropic mock reply");
 
     assert_eq!(result, "Mocked reply from OpenAI");
     mock.assert();

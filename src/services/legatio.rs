@@ -26,10 +26,13 @@ use crate::{
     services::{
         config::{read_config, store_config, UserConfig},
         //model::{ask_question, Question, LLM},
-        search::{item_selector, select_files},
+        search::{item_selector, item_selector_multi, pick_paths},
         ui::{extract_theme_colors, usr_prompt_chain, usr_prompts, usr_scrolls},
     },
-    utils::{logger::log_info, structs::{Project, Prompt, Scroll}},
+    utils::{
+        logger::log_info,
+        structs::{Project, Prompt, Scroll},
+    },
 };
 
 use anyhow::Result;
@@ -810,10 +813,12 @@ impl Legatio {
                     }
                 } else {
                     // Select dir but if none selected go to prev state
-                    let selected_dir = match select_files(None)? {
-                        None => return Ok(AppState::SelectProject),
-                        Some(dir) => dir,
-                    };
+                    // Select only the first project
+                    let dirs = pick_paths(None, true)?; // now returns Vec<String>
+                    if dirs.is_empty() {
+                        return Ok(AppState::SelectProject);
+                    }
+                    let selected_dir = &dirs[0];
                     let project = Project::new(&selected_dir);
                     store_project(pool, &project).await?;
                     self.current_project = Some(project.clone());
@@ -827,10 +832,11 @@ impl Legatio {
             }
             InputEvent::New => {
                 // Select dir but if none selected go to prev state
-                let selected_dir = match select_files(None)? {
-                    None => return Ok(AppState::SelectProject),
-                    Some(dir) => dir,
-                };
+                let dirs = pick_paths(None, true)?;
+                if dirs.is_empty() {
+                    return Ok(AppState::SelectProject);
+                }
+                let selected_dir: &str = &dirs[0].as_str();
 
                 // Fetch all projects from cache
                 let projects = if let Some(cache) = &self.project_list_cache {
@@ -927,28 +933,29 @@ impl Legatio {
                         let mut concat_prompts =
                             vec![format!(" -[ {} -:- Unchained]-", project_name)];
                         for p in prompts.iter() {
-                            let (p_str, o_str) = format_prompt(p);
-                            concat_prompts.push(format!("{}\n{}", p_str, o_str));
+                            concat_prompts.push(format_prompt(p));
                         }
                         concat_prompts.reverse();
 
                         if let Some(selected_prompt) = item_selector(concat_prompts.clone())? {
-                            let mut idx = concat_prompts
-                                .iter()
-                                .position(|p| p == &selected_prompt)
-                                .unwrap();
-
-                            if idx < prompts.len() {
-                                idx = prompts.len() - 1 - idx;
-                                self.current_prompt = prompts.get(idx).map(|p| p.to_owned());
-                                chain_into_canvas(
-                                    project,
-                                    Some(&prompts),
-                                    self.current_prompt.as_ref(),
-                                )?;
+                            if let Some(idx0) =
+                                concat_prompts.iter().position(|p| *p == selected_prompt)
+                            {
+                                if idx0 < prompts.len() {
+                                    // reverse the index in one shot:
+                                    let idx = prompts.len() - 1 - idx0;
+                                    self.current_prompt = Some(prompts[idx].clone());
+                                    chain_into_canvas(
+                                        project,
+                                        Some(&prompts),
+                                        self.current_prompt.as_ref(),
+                                    )?;
+                                } else {
+                                    self.current_prompt = None;
+                                    chain_into_canvas(project, None, None)?;
+                                }
                             } else {
-                                self.current_prompt = None;
-                                chain_into_canvas(project, None, None)?;
+                                return Ok(AppState::SelectPrompt);
                             }
                         } else {
                             enable_raw_mode()?;
@@ -972,8 +979,7 @@ impl Legatio {
 
                     let mut concat_prompts = vec![format!(" -[ {} -:- Unchained]-", project_name)];
                     for p in prompts.iter() {
-                        let (p_str, o_str) = format_prompt(p);
-                        concat_prompts.push(format!("{}\n{}", p_str, o_str));
+                        concat_prompts.push(format_prompt(p));
                     }
 
                     if let Some(selected_prompt) = item_selector(concat_prompts.clone())? {
@@ -1064,26 +1070,20 @@ impl Legatio {
         match key_event {
             InputEvent::New | InputEvent::NewAnywhere => {
                 if let Some(project) = &self.current_project {
-                    log_info(&format!("Pressed key {:?}", key_event));
-                    disable_raw_mode()?;
-                    // Select files but if none selected go to prev state
-                    let selected_scroll = match select_files(
-                            match key_event {
-                                InputEvent::New => {
-                                    Some(&project.project_path)
-                                },
-                                InputEvent::NewAnywhere => {
-                                    None
-                                },
-                                _ => None
-                            }
-                        )? {
-                        None => return Ok(AppState::EditScrolls),
-                        Some(scroll) => scroll,
+                    // pick from project dir vs anywhere
+                    let root = if key_event == InputEvent::New {
+                        Some(project.project_path.as_str())
+                    } else {
+                        None
                     };
 
-                    enable_raw_mode()?;
-                    // Fetch all scrolls from cache
+                    // fzf‐based multi‐select now:
+                    let selected_scrolls = pick_paths(root, false)?;
+                    if selected_scrolls.is_empty() {
+                        return Ok(AppState::EditScrolls);
+                    }
+
+                    // read & store each newly chosen scroll
                     let mut scrolls: Vec<Scroll> = if let Some(cache) = &self.scroll_list_cache {
                         cache.clone()
                     } else {
@@ -1091,13 +1091,15 @@ impl Legatio {
                         self.scroll_list_cache = Some(s.clone());
                         s
                     };
-                    // New scroll will be added
-                    if !scrolls.iter().any(|s| s.scroll_path == selected_scroll) {
-                        let new_scroll = read_file(&selected_scroll, &project.project_id, None)?;
-                        store_scroll(pool, &new_scroll).await?;
-                        scrolls.push(new_scroll);
-                        self.scroll_list_cache = Some(scrolls);
+
+                    for path in selected_scrolls {
+                        if !scrolls.iter().any(|s| s.scroll_path == path) {
+                            let new_scroll = read_file(&path, &project.project_id, None)?;
+                            store_scroll(pool, &new_scroll).await?;
+                            scrolls.push(new_scroll);
+                        }
                     }
+                    self.scroll_list_cache = Some(scrolls);
                 }
                 Ok(AppState::EditScrolls)
             }
@@ -1116,23 +1118,16 @@ impl Legatio {
                         .map(|s| s.scroll_path.clone())
                         .collect::<Vec<_>>();
 
-                    disable_raw_mode()?;
-                    if let Some(selected_scroll) = item_selector(scroll_names.clone())? {
-                        enable_raw_mode()?;
-                        let idx = scroll_names
-                            .iter()
-                            .position(|s| s == &selected_scroll)
-                            .unwrap();
-
-                        if idx < scrolls.len() {
+                    // multi‐select delete:
+                    let to_delete = item_selector_multi(scroll_names.clone())?;
+                    for path in &to_delete {
+                        if let Some(idx) = scroll_names.iter().position(|s| s == path) {
                             delete_scroll(pool, &scrolls[idx].scroll_id).await?;
-
-                            // Clear the cache
-                            self.scroll_list_cache = None;
                         }
-                    } else {
-                        enable_raw_mode()?;
-                        return Ok(AppState::EditScrolls);
+                    }
+                    // clear cache once if we deleted anything
+                    if !to_delete.is_empty() {
+                        self.scroll_list_cache = None;
                     }
                 }
                 Ok(AppState::EditScrolls)
@@ -1214,13 +1209,15 @@ impl Legatio {
 
             let final_prompt = chain_match_canvas(project).unwrap_or(String::from("."));
 
-            let prompt_chain: Option<Vec<AiPrompt>> = chain.map(|prompts| prompts
-                        .iter()
-                        .map(|p| AiPrompt {
-                            content: p.content.to_owned(),
-                            output: p.output.to_owned(),
-                        })
-                        .collect());
+            let prompt_chain: Option<Vec<AiPrompt>> = chain.map(|prompts| {
+                prompts
+                    .iter()
+                    .map(|p| AiPrompt {
+                        content: p.content.to_owned(),
+                        output: p.output.to_owned(),
+                    })
+                    .collect()
+            });
 
             let question = Question {
                 system_prompt: if sys_prompt.is_empty() {
@@ -1231,7 +1228,6 @@ impl Legatio {
                 messages: prompt_chain,
                 new_prompt: final_prompt.to_owned(),
             };
-
 
             // Debuging
             //let output = String::from("Not the output");
@@ -1278,6 +1274,4 @@ impl Legatio {
         }
         Ok(AppState::AskModel)
     }
-
-    
 }

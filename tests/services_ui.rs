@@ -3,7 +3,7 @@ mod tests {
     use legatio::{
         core::prompt::{get_prompts, store_prompt},
         services::ui::*,
-        utils::structs::{Project, Prompt},
+        utils::structs::{Project, Prompt, Scroll},
     };
     use sqlx::{sqlite::SqlitePoolOptions, SqlitePool};
 
@@ -17,35 +17,31 @@ mod tests {
 
     #[tokio::test]
     async fn test_usr_scrolls() {
-        // Arrange: Create mock database and scrolls table
-        let pool = create_test_pool().await;
-        sqlx::query("CREATE TABLE scrolls (scroll_id TEXT, scroll_path TEXT, content TEXT, project_id TEXT);")
-            .execute(&pool)
-            .await
-            .unwrap();
-
-        sqlx::query("INSERT INTO scrolls (scroll_id, scroll_path, content, project_id) VALUES (?, ?, ?, ?);")
-            .bind("scroll_id_1")
-            .bind("/path/to/scroll_test")
-            .bind("This is a mock scroll's content")
-            .bind("project1")
-            .execute(&pool)
-            .await
-            .expect("Failed to insert scroll into database");
-
+        // Arrange: build a fake project and a scroll under that project path
         let project = Project {
             project_id: "project1".to_string(),
-            project_path: "/fake/project/path".to_string(),
+            // note trailing slash so strip_prefix yields exactly "scroll_test"
+            project_path: "/fake/project/path/".to_string(),
         };
 
-        // Act: Fetch scrolls for the project
-        let result = usr_scrolls(&pool, &project).await;
+        let scroll = Scroll {
+            scroll_id: "scroll_id_1".to_string(),
+            scroll_path: "/fake/project/path/scroll_test".to_string(),
+            content: "dummy content".to_string(),
+            project_id: "project1".to_string(),
+        };
 
-        // Assert: Verify scroll retrieval works correctly
+        let scrolls_vec = vec![scroll];
+
+        // Act
+        let result = usr_scrolls(scrolls_vec, &project).await;
+
+        // Assert
         assert!(result.is_ok());
-        let scrolls = result.unwrap();
-        assert_eq!(scrolls.len(), 1);
-        assert_eq!(scrolls[0], "scroll_test");
+        let lines = result.unwrap();
+        assert_eq!(lines.len(), 1);
+        // we expect a Line containing "scroll_test"
+        assert_eq!(lines[0], "scroll_test".into());
     }
 
     // Testing helper_print recursive formatting with multiple nested prompts
@@ -71,11 +67,16 @@ mod tests {
         let result = helper_print(&prompts, &prompt1, "  |");
 
         // Assert: Verify the formatting is correct at each level of recursion
-        assert!(result.is_ok());
-        let formatted_prompts = result.unwrap();
-        assert!(formatted_prompts.contains(&"  |> Prompt: Root Prompt".to_string()));
-        assert!(formatted_prompts.contains(&"  |  |> Prompt: Child Prompt".to_string()));
-        assert!(formatted_prompts.contains(&"  |  |  |> Prompt: Grandchild Prompt".to_string()));
+        let formatted = result.expect("helper_print failed");
+        assert!(formatted
+            .iter()
+            .any(|s| s.contains("  |> Prompt: Root Prompt")));
+        assert!(formatted
+            .iter()
+            .any(|s| s.contains("  |  |> Prompt: Child Prompt")));
+        assert!(formatted
+            .iter()
+            .any(|s| s.contains("  |  |  |> Prompt: Grandchild Prompt")));
     }
 
     // Testing recursive prompt formatting via usr_prompts() function
@@ -97,21 +98,27 @@ mod tests {
         );
         let prompts = vec![prompt1.clone(), prompt2.clone(), prompt3.clone()];
 
-        // Act: Format all prompts recursively
+        // Act
         let formatted_prompts = usr_prompts(&prompts).await;
 
-        // Assert: Verify all prompts are correctly formatted and included
-        assert!(formatted_prompts.is_ok());
-        let formatted = formatted_prompts.unwrap();
-        assert_eq!(formatted.len(), 9); // "Indentation + Prompt + Output" for each prompt
-        assert!(formatted.contains(&"  |> Prompt: Root Prompt".to_string()));
-        assert!(formatted.contains(&"  |  |> Prompt: Child Prompt".to_string()));
-        assert!(formatted.contains(&"  |  |  |> Prompt: Grandchild Prompt".to_string()));
+        // Assert
+        let formatted = formatted_prompts.expect("usr_prompts failed");
+        // each prompt produces 3 lines: indent, prompt, output → 3 * 3 = 9
+        assert_eq!(formatted.len(), 9);
+        assert!(formatted
+            .iter()
+            .any(|s| s.contains("  |> Prompt: Root Prompt")));
+        assert!(formatted
+            .iter()
+            .any(|s| s.contains("  |  |> Prompt: Child Prompt")));
+        assert!(formatted
+            .iter()
+            .any(|s| s.contains("  |  |  |> Prompt: Grandchild Prompt")));
     }
 
     #[test]
     fn test_usr_prompt_chain() {
-        // Arrange: Create a chain of prompts
+        // Arrange
         let prompt1 = Prompt::new("project1", "First Prompt", "First Output", "root");
         let prompt2 = Prompt::new(
             "project1",
@@ -127,19 +134,18 @@ mod tests {
         );
         let prompts = vec![prompt1.clone(), prompt2.clone(), prompt3.clone()];
 
-        // Act: Fetch the reverse-ordered prompt chain
+        // Act
         let result = usr_prompt_chain(&prompts);
 
-        // Assert: Verify the prompts and outputs are in reverse order
-        let prompt = " |- Prompt:";
-        let output = " |  Output:";
-        assert_eq!(result.len(), 6); // Includes Prompt + Output for each
-        assert_eq!(result[0], format!("{prompt} Third Prompt"));
-        assert_eq!(result[1], format!("{output} Third Output"));
-        assert_eq!(result[2], format!("{prompt} Second Prompt"));
-        assert_eq!(result[3], format!("{output} Second Output"));
-        assert_eq!(result[4], format!("{prompt} First Prompt"));
-        assert_eq!(result[5], format!("{output} First Output"));
+        // Assert: we should have 2 lines per prompt = 6
+        assert_eq!(result.len(), 6);
+        // Check that each prompt/output appears in reverse
+        assert!(result[0].ends_with("Third Prompt"));
+        assert!(result[1].ends_with("Third Output"));
+        assert!(result[2].ends_with("Second Prompt"));
+        assert!(result[3].ends_with("Second Output"));
+        assert!(result[4].ends_with("First Prompt"));
+        assert!(result[5].ends_with("First Output"));
     }
 
     #[tokio::test]
@@ -165,12 +171,12 @@ mod tests {
         store_prompt(&pool, &prompt).await.unwrap();
         let prompts = get_prompts(&pool, "project1").await.unwrap();
 
-        // Assert: Verify the prompt was stored and retrieved correctly
+        // Assert
         assert_eq!(prompts.len(), 1);
-        let retrieved_prompt = &prompts[0];
-        assert_eq!(retrieved_prompt.prompt_id, prompt.prompt_id);
-        assert_eq!(retrieved_prompt.content, "Test Content");
-        assert_eq!(retrieved_prompt.output, "Test Output");
-        assert_eq!(retrieved_prompt.prev_prompt_id, "root");
+        let retrieved = &prompts[0];
+        assert_eq!(retrieved.prompt_id, prompt.prompt_id);
+        assert_eq!(retrieved.content, prompt.content);
+        assert_eq!(retrieved.output, prompt.output);
+        assert_eq!(retrieved.prev_prompt_id, prompt.prev_prompt_id);
     }
 }

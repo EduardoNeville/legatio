@@ -2,13 +2,9 @@ use std::fs;
 
 use anyhow::{Context, Ok, Result};
 use ratatui::{style::Color, text::Line};
-use sqlx::SqlitePool;
 
 use crate::{
-    core::{
-        prompt::{format_prompt, format_prompt_depth},
-        scroll::get_scrolls,
-    },
+    core::prompt::format_prompt_depth,
     utils::{
         error::AppError,
         logger::log_error,
@@ -30,12 +26,12 @@ pub struct ThemeColors {
 pub async fn usr_scrolls(scrolls: Vec<Scroll>, project: &Project) -> Result<Vec<Line>> {
     Ok(scrolls
         .into_iter()
-        .filter_map(|row| match row.scroll_path.strip_prefix(&project.project_path) {
-            Some(remaining) => {
-                Some(Line::from(remaining.to_string()))
-            }
-            None => Some(Line::from(row.scroll_path.to_string())),
-        })
+        .filter_map(
+            |row| match row.scroll_path.strip_prefix(&project.project_path) {
+                Some(remaining) => Some(Line::from(remaining.to_string())),
+                None => Some(Line::from(row.scroll_path.to_string())),
+            },
+        )
         .collect())
 }
 
@@ -86,10 +82,10 @@ pub async fn usr_prompts(prompts: &Vec<Prompt>) -> Result<Vec<String>> {
 pub fn usr_prompt_chain(prompts: &[Prompt]) -> Vec<String> {
     let mut str_items: Vec<String> = Vec::new();
     for p in prompts.iter() {
-        let (p_str, o_str) = format_prompt(p);
+        let (p_str, o_str) = format_prompt_depth(p, "");
         // Reverse order for fst at top
-        str_items.push(o_str);
-        str_items.push(p_str);
+        str_items.push(format!("| {}", o_str));
+        str_items.push(format!("|>{}", p_str));
     }
     str_items.reverse();
     str_items

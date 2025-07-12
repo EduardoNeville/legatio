@@ -159,24 +159,17 @@ pub fn prompt_chain(prompts: &[Prompt], prompt: &Prompt) -> Vec<Prompt> {
     chain
 }
 
-pub fn format_prompt(p: &Prompt) -> (String, String) {
+pub fn format_prompt(p: &Prompt) -> String {
     let p_str = format!(" |- Prompt: {}", p.content.replace('\n', " "));
-
     let o_str = format!(" |  Output: {}", p.output.replace('\n', " "));
 
-    (p_str, o_str)
+    format!("{p_str}|- {o_str}")
 }
 
 pub fn format_prompt_depth(p: &Prompt, b_depth: &str) -> (String, String) {
-    let p_str = format!(
-        "{b_depth}> Prompt: {}",
-        p.content.replace('\n', " ")
-    );
+    let p_str = format!("{b_depth}> Prompt: {}", p.content.replace('\n', " "));
 
-    let o_str = format!(
-        "{b_depth}> Output: {}",
-        p.output.replace('\n', " ")
-    );
+    let o_str = format!("{b_depth}> Output: {}", p.output.replace('\n', " "));
 
     (p_str, o_str)
 }

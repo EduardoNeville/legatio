@@ -1672,7 +1672,7 @@ dependencies = [
 
 [[package]]
 name = "legatio"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "anyhow",
  "ask_ai",
@@ -1692,6 +1692,7 @@ dependencies = [
  "tokio",
  "toml",
  "uuid",
+ "walkdir",
 ]
 
 [[package]]
