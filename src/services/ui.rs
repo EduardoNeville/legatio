@@ -1,7 +1,7 @@
 use std::fs;
 
 use anyhow::{Context, Ok, Result};
-use ratatui::style::Color;
+use ratatui::{style::Color, text::Line};
 use sqlx::SqlitePool;
 
 use crate::{
@@ -12,7 +12,7 @@ use crate::{
     utils::{
         error::AppError,
         logger::log_error,
-        structs::{Project, Prompt},
+        structs::{Project, Prompt, Scroll},
     },
 };
 
@@ -27,18 +27,14 @@ pub struct ThemeColors {
     pub accent: Color,
 }
 
-pub async fn usr_scrolls(pool: &SqlitePool, project: &Project) -> Result<Vec<String>> {
-    let scrolls = get_scrolls(pool, &project.project_id)
-        .await
-        .context("Failed to fetch scrolls from the database")?;
-
+pub async fn usr_scrolls(scrolls: Vec<Scroll>, project: &Project) -> Result<Vec<Line>> {
     Ok(scrolls
         .into_iter()
         .filter_map(|row| match row.scroll_path.strip_prefix(&project.project_path) {
             Some(remaining) => {
-                Some(remaining.to_string())
+                Some(Line::from(remaining.to_string()))
             }
-            None => Some(row.scroll_path.to_string()),
+            None => Some(Line::from(row.scroll_path.to_string())),
         })
         .collect())
 }

@@ -337,18 +337,14 @@ impl Legatio {
                 bot_title = String::from("[ Prompts ]");
                 if let Some(project) = &self.current_project {
                     // Scroll PREP
-                    let scrolls = usr_scrolls(pool, project).await?;
-                    // Initialize `scroll_text` if it hasn't been initialized
-                    if scroll_text.is_none() {
-                        scroll_text = Some(vec![]);
-                    }
-
-                    // Now safely modify the inner `Vec<Line>`
-                    if let Some(items) = scroll_text.as_mut() {
-                        for scroll in scrolls {
-                            items.push(Line::from(scroll)); // Mutable push happens here
-                        }
-                    }
+                    let scrolls: Vec<Scroll> = if let Some(cache) = &self.scroll_list_cache {
+                        cache.clone()
+                    } else {
+                        let s = get_scrolls(pool, &project.project_id).await?;
+                        self.scroll_list_cache = Some(s.clone());
+                        s
+                    };
+                    scroll_text = Some(usr_scrolls(scrolls, project).await?);
 
                     // Prompt PREP
                     let prompt = self.current_prompt.as_ref();
@@ -406,6 +402,7 @@ impl Legatio {
 
                 if let Some(project) = &self.current_project {
                     // Fetch all prompts from cache
+                    // Fetch all prompts from cache
                     let scrolls: Vec<Scroll> = if let Some(cache) = &self.scroll_list_cache {
                         cache.clone()
                     } else {
@@ -413,16 +410,8 @@ impl Legatio {
                         self.scroll_list_cache = Some(s.clone());
                         s
                     };
-                    for scroll in scrolls.iter() {
-                        let scroll_name =
-                            match scroll.scroll_path.strip_prefix(&project.project_path) {
-                                Some(remaining) => {
-                                    remaining.to_string()
-                                }
-                                None => scroll.scroll_path.to_string(),
-                            };
-                        bot_items.push(Line::from(scroll_name));
-                    }
+                    // Scrolls displayed bottom instead of scroll_text
+                    bot_items = usr_scrolls(scrolls, project).await?;
                 }
             }
             AppState::AskModelConfirmation => {
@@ -437,18 +426,14 @@ impl Legatio {
                 bot_title = String::from("[ Prompts ]");
                 if let Some(project) = &self.current_project {
                     // Scroll PREP
-                    let scrolls = usr_scrolls(pool, project).await?;
-                    // Initialize `scroll_text` if it hasn't been initialized
-                    if scroll_text.is_none() {
-                        scroll_text = Some(vec![]);
-                    }
-
-                    // Now safely modify the inner `Vec<Line>`
-                    if let Some(items) = scroll_text.as_mut() {
-                        for scroll in scrolls {
-                            items.push(Line::from(scroll)); // Mutable push happens here
-                        }
-                    }
+                    let scrolls: Vec<Scroll> = if let Some(cache) = &self.scroll_list_cache {
+                        cache.clone()
+                    } else {
+                        let s = get_scrolls(pool, &project.project_id).await?;
+                        self.scroll_list_cache = Some(s.clone());
+                        s
+                    };
+                    scroll_text = Some(usr_scrolls(scrolls, project).await?);
 
                     // Prompt PREP
                     let prompt = self.current_prompt.as_ref();
@@ -1293,4 +1278,6 @@ impl Legatio {
         }
         Ok(AppState::AskModel)
     }
+
+    
 }
