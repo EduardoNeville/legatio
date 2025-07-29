@@ -1078,7 +1078,7 @@ impl Legatio {
                     };
 
                     // fzf‐based multi‐select now:
-                    let selected_scrolls = pick_paths(root, false)?;
+                    let selected_scrolls = pick_paths(root,false)?;
                     if selected_scrolls.is_empty() {
                         return Ok(AppState::EditScrolls);
                     }
